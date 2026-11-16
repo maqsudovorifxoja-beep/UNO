@@ -50,13 +50,12 @@ export const UnoButton: React.FC<UnoButtonProps> = ({
           }
         }}
         disabled={hasSaidUno}
-        className={`relative group px-4 py-2 sm:px-6 sm:py-2.5 rounded-2xl font-black italic tracking-tighter text-sm sm:text-base md:text-lg transition-all duration-200 select-none cursor-pointer flex items-center gap-2 shadow-2xl ${
-          hasSaidUno
+        className={`relative group px-4 py-2 sm:px-6 sm:py-2.5 rounded-2xl font-black italic tracking-tighter text-sm sm:text-base md:text-lg transition-all duration-200 select-none cursor-pointer flex items-center gap-2 shadow-2xl ${hasSaidUno
             ? 'bg-emerald-600 text-white border-2 border-emerald-400 cursor-default shadow-emerald-600/40'
             : canSayUno
-            ? 'bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 text-yellow-300 border-2 border-yellow-300 animate-uno-pulse active:scale-95 hover:scale-105 shadow-red-600/60'
-            : 'bg-slate-900 text-slate-400 border-2 border-slate-700 hover:text-slate-200 hover:bg-slate-800 active:scale-95'
-        }`}
+              ? 'bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 text-yellow-300 border-2 border-yellow-300 animate-uno-pulse active:scale-95 hover:scale-105 shadow-red-600/60'
+              : 'bg-slate-900 text-slate-400 border-2 border-slate-700 hover:text-slate-200 hover:bg-slate-800 active:scale-95'
+          }`}
       >
         {hasSaidUno ? (
           <Check size={20} className="text-white" strokeWidth={3} />

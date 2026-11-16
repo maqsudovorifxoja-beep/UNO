@@ -9,6 +9,7 @@ import type {
   Player,
   TableTheme,
   BotDifficulty,
+  NetworkMessage,
 } from './types/game';
 import { generateDeck, canPlayCard, getNextPlayerIndex, calculateRoundScore, shuffle } from './utils/unoEngine';
 import { decideBotMove } from './utils/botAi';
@@ -30,6 +31,7 @@ import { PassCurtainModal } from './components/PassCurtainModal';
 import { HandSwapModal } from './components/HandSwapModal';
 import { ReactionPicker } from './components/ReactionPicker';
 import { ActionBanner, type ActionNotice } from './components/ActionBanner';
+import { OnlineLobbyModal } from './components/OnlineLobbyModal';
 
 const DEFAULT_HOUSE_RULES: HouseRules = {
   stacking: true,
@@ -70,6 +72,17 @@ export function App() {
   const [isHandSwapOpen, setIsHandSwapOpen] = useState(false);
   const [pendingCardToPlay, setPendingCardToPlay] = useState<Card | null>(null);
 
+  // Online Multiplayer State
+  const [isOnlineModalOpen, setIsOnlineModalOpen] = useState(false);
+  const [onlineIsHost, setOnlineIsHost] = useState(false);
+  const [onlineRoomCode, setOnlineRoomCode] = useState('');
+  const [onlineHostName, setOnlineHostName] = useState('Host');
+  const [onlineHostAvatar, setOnlineHostAvatar] = useState('ninja');
+  const [onlineGuestName, setOnlineGuestName] = useState<string | null>(null);
+  const [onlineGuestAvatar, setOnlineGuestAvatar] = useState<string | null>(null);
+  const [onlineIsConnecting, setOnlineIsConnecting] = useState(false);
+  const [onlineError, setOnlineError] = useState<string | null>(null);
+
   // Statistics
   const [stats, setStats] = useState<GameStats>(() => {
     try {
@@ -108,9 +121,8 @@ export function App() {
     unoChallengePendingPlayerId: null,
   });
 
-  // P2P Multiplayer ref
+  // P2P Multiplayer manager reference
   const p2pRef = useRef<P2PManager | null>(null);
-  const [onlineRoomCode, setOnlineRoomCode] = useState<string>('');
 
   // Show prominent action notice banner
   const triggerActionNotice = useCallback((notice: ActionNotice) => {
@@ -158,8 +170,9 @@ export function App() {
       playerCount: number,
       botDifficulty: BotDifficulty = 'medium',
       customNames: string[] = [],
-      humanAvatarId: string = 'ninja'
-    ) => {
+      humanAvatarId: string = 'ninja',
+      guestAvatarId: string = 'alien'
+    ): GameState => {
       const deck = generateDeck();
       const players: Player[] = [];
 
@@ -167,7 +180,11 @@ export function App() {
         const isBot = mode === 'vs-bot' ? i > 0 : false;
         const botConfig = isBot ? BOT_CONFIGS[(i - 1) % BOT_CONFIGS.length] : null;
         const name = customNames[i] || (isBot ? botConfig?.name || `Bot ${i}` : `O'yinchi ${i + 1}`);
-        const avatar = isBot ? botConfig?.avatar || 'bot' : humanAvatarId;
+        const avatar = isBot
+          ? botConfig?.avatar || 'bot'
+          : i === 0
+          ? humanAvatarId
+          : guestAvatarId;
 
         players.push({
           id: `player-${i}`,
@@ -181,12 +198,12 @@ export function App() {
         });
       }
 
-      // Draw initial top card (ensure it's not a Wild Draw 4 to start fairly)
+      // Draw initial top card
       let topCardIndex = deck.findIndex((c) => c.value !== 'wild4' && c.color !== 'wild');
       if (topCardIndex === -1) topCardIndex = 0;
       const initialTopCard = deck.splice(topCardIndex, 1)[0];
 
-      setGameState({
+      const newGameState: GameState = {
         id: `game-${Date.now()}`,
         mode,
         status: 'playing',
@@ -212,8 +229,9 @@ export function App() {
         ],
         turnTimeLeft: 30,
         unoChallengePendingPlayerId: null,
-      });
+      };
 
+      setGameState(newGameState);
       setInGame(true);
       setIsGameOverOpen(false);
       sound.playCardSlide();
@@ -226,6 +244,8 @@ export function App() {
         subtitleUz: `Birinchi karta: ${initialTopCard.color.toUpperCase()} ${initialTopCard.value}`,
         subtitleEn: `Top card: ${initialTopCard.color.toUpperCase()} ${initialTopCard.value}`,
       });
+
+      return newGameState;
     },
     [houseRules, lang, triggerActionNotice]
   );
@@ -235,7 +255,6 @@ export function App() {
     if (currentDrawPile.length > 0) {
       return { newDraw: currentDrawPile, newDiscard: discardPile };
     }
-    // Take discard cards except the top one and shuffle
     if (discardPile.length <= 1) {
       return { newDraw: generateDeck(), newDiscard: discardPile };
     }
@@ -249,6 +268,17 @@ export function App() {
    */
   const handleDrawCard = useCallback(
     () => {
+      // If playing online as guest, send DRAW_CARD to host
+      if (gameState.mode === 'online' && !onlineIsHost) {
+        p2pRef.current?.sendMessage({
+          type: 'DRAW_CARD',
+          payload: {},
+          senderId: 'guest',
+        });
+        sound.playCardSlide();
+        return;
+      }
+
       setGameState((prev) => {
         let { newDraw, newDiscard } = ensureDrawPile(prev.drawPile, prev.discardPile);
         const player = prev.players[prev.currentPlayerIndex];
@@ -278,18 +308,16 @@ export function App() {
             ? `${player.name} ${cardsToDrawCount} ta karta oldi`
             : `${player.name} drew ${cardsToDrawCount} card(s)`;
 
-        // If player drew due to an attack stack (+2/+4), their turn ends
         const wasAttack = prev.activeDrawStack > 0;
         const nextIdx = wasAttack
           ? getNextPlayerIndex(prev.currentPlayerIndex, prev.players.length, prev.direction, 1)
           : prev.currentPlayerIndex;
 
-        // If it was pass and play and turn changed
         if (wasAttack && prev.mode === 'pass-and-play') {
           setIsPassCurtainOpen(true);
         }
 
-        return {
+        const nextState: GameState = {
           ...prev,
           players: updatedPlayers,
           drawPile: newDraw,
@@ -307,9 +335,16 @@ export function App() {
             ...prev.logs.slice(0, 19),
           ],
         };
+
+        // If host in online mode, sync to guest
+        if (prev.mode === 'online' && onlineIsHost) {
+          p2pRef.current?.syncState(nextState);
+        }
+
+        return nextState;
       });
     },
-    [lang]
+    [lang, onlineIsHost, gameState.mode]
   );
 
   /**
@@ -317,20 +352,28 @@ export function App() {
    */
   const executePlayCard = useCallback(
     (card: Card, chosenColor?: CardColor, targetPlayerId?: string) => {
+      // If in online mode as guest, send PLAY_CARD to host
+      if (gameState.mode === 'online' && !onlineIsHost) {
+        p2pRef.current?.sendMessage({
+          type: 'PLAY_CARD',
+          payload: { card, chosenColor, targetPlayerId },
+          senderId: 'guest',
+        });
+        sound.playCardSnap();
+        return;
+      }
+
       setGameState((prev) => {
         const player = prev.players[prev.currentPlayerIndex];
         const newHand = player.hand.filter((c) => c.id !== card.id);
         const willHaveOneCard = newHand.length === 1;
 
-        // Active color
         const newColor: CardColor = card.color === 'wild' ? chosenColor || 'red' : card.color;
 
-        // Stacking / Attack count
         let newActiveStack = prev.activeDrawStack;
         if (card.value === 'draw2') newActiveStack += 2;
         if (card.value === 'wild4') newActiveStack += 4;
 
-        // Direction & Skips
         let newDirection = prev.direction;
         let skipCount = 1;
 
@@ -429,7 +472,7 @@ export function App() {
           setIsGameOverOpen(true);
           updateStats(!player.isBot);
 
-          return {
+          const finalState: GameState = {
             ...prev,
             players: updatedPlayers,
             discardPile: [...prev.discardPile, card],
@@ -449,6 +492,12 @@ export function App() {
               ...prev.logs,
             ],
           };
+
+          if (prev.mode === 'online' && onlineIsHost) {
+            p2pRef.current?.syncState(finalState);
+          }
+
+          return finalState;
         }
 
         // Advance to next player
@@ -475,7 +524,7 @@ export function App() {
           sound.playTurnChime();
         }
 
-        return {
+        const nextState: GameState = {
           ...prev,
           players: updatedPlayers,
           discardPile: [...prev.discardPile, card],
@@ -499,9 +548,15 @@ export function App() {
             ...prev.logs.slice(0, 19),
           ],
         };
+
+        if (prev.mode === 'online' && onlineIsHost) {
+          p2pRef.current?.syncState(nextState);
+        }
+
+        return nextState;
       });
     },
-    [lang, triggerActionNotice, triggerReaction, updateStats]
+    [lang, triggerActionNotice, triggerReaction, updateStats, onlineIsHost, gameState.mode]
   );
 
   /**
@@ -520,8 +575,11 @@ export function App() {
    * Card click handler by current player
    */
   const handleCardClick = (card: Card) => {
-    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-    if (currentPlayer.isBot) return;
+    // In online mode as guest, my player index is 1; as host, my player index is 0
+    const myIndex = gameState.mode === 'online' ? (onlineIsHost ? 0 : 1) : 0;
+    if (gameState.currentPlayerIndex !== myIndex && gameState.mode !== 'pass-and-play') {
+      return;
+    }
 
     const top = gameState.discardPile[gameState.discardPile.length - 1];
     if (!canPlayCard(card, top, gameState.currentColor, gameState.activeDrawStack, gameState.houseRules)) {
@@ -572,6 +630,15 @@ export function App() {
    * Player presses UNO! button
    */
   const handleSayUno = () => {
+    if (gameState.mode === 'online' && !onlineIsHost) {
+      p2pRef.current?.sendMessage({
+        type: 'CALL_UNO',
+        payload: {},
+        senderId: 'guest',
+      });
+      return;
+    }
+
     setGameState((prev) => {
       const currentPlayer = prev.players[prev.currentPlayerIndex];
       const updatedPlayers = prev.players.map((p, idx) => {
@@ -591,7 +658,7 @@ export function App() {
         subtitleEn: 'Only 1 card remaining!',
       });
 
-      return {
+      const nextState: GameState = {
         ...prev,
         players: updatedPlayers,
         logs: [
@@ -604,6 +671,12 @@ export function App() {
           ...prev.logs.slice(0, 19),
         ],
       };
+
+      if (prev.mode === 'online' && onlineIsHost) {
+        p2pRef.current?.syncState(nextState);
+      }
+
+      return nextState;
     });
   };
 
@@ -612,6 +685,15 @@ export function App() {
    */
   const handleChallengeUno = () => {
     if (!gameState.unoChallengePendingPlayerId) return;
+
+    if (gameState.mode === 'online' && !onlineIsHost) {
+      p2pRef.current?.sendMessage({
+        type: 'CHALLENGE_UNO',
+        payload: {},
+        senderId: 'guest',
+      });
+      return;
+    }
 
     setGameState((prev) => {
       const targetId = prev.unoChallengePendingPlayerId;
@@ -642,7 +724,7 @@ export function App() {
         subtitleEn: 'Draws 2 penalty cards for forgetting UNO',
       });
 
-      return {
+      const nextState: GameState = {
         ...prev,
         players: updatedPlayers,
         drawPile: newDraw,
@@ -661,19 +743,24 @@ export function App() {
           ...prev.logs.slice(0, 19),
         ],
       };
+
+      if (prev.mode === 'online' && onlineIsHost) {
+        p2pRef.current?.syncState(nextState);
+      }
+
+      return nextState;
     });
   };
 
   /**
-   * Bot AI execution loop
+   * Bot AI execution loop (Only runs in vs-bot mode)
    */
   useEffect(() => {
-    if (!inGame || gameState.status !== 'playing') return;
+    if (!inGame || gameState.status !== 'playing' || gameState.mode !== 'vs-bot') return;
 
     const currentPlayer = gameState.players[gameState.currentPlayerIndex];
     if (!currentPlayer || !currentPlayer.isBot) return;
 
-    // Natural human-like thinking delay
     const delay = currentPlayer.botDifficulty === 'hard' ? 950 : 1350;
     const timer = setTimeout(() => {
       const topCard = gameState.discardPile[gameState.discardPile.length - 1];
@@ -715,88 +802,139 @@ export function App() {
   // Sort player hand helpers
   const handleSortByColor = () => {
     setGameState((prev) => {
-      const player = prev.players[prev.currentPlayerIndex];
+      const myIdx = prev.mode === 'online' ? (onlineIsHost ? 0 : 1) : prev.currentPlayerIndex;
+      const player = prev.players[myIdx];
+      if (!player) return prev;
       const sorted = [...player.hand].sort((a, b) => a.color.localeCompare(b.color));
-      const updatedPlayers = prev.players.map((p, idx) =>
-        idx === prev.currentPlayerIndex ? { ...p, hand: sorted } : p
-      );
+      const updatedPlayers = prev.players.map((p, idx) => (idx === myIdx ? { ...p, hand: sorted } : p));
       return { ...prev, players: updatedPlayers };
     });
   };
 
   const handleSortByValue = () => {
     setGameState((prev) => {
-      const player = prev.players[prev.currentPlayerIndex];
+      const myIdx = prev.mode === 'online' ? (onlineIsHost ? 0 : 1) : prev.currentPlayerIndex;
+      const player = prev.players[myIdx];
+      if (!player) return prev;
       const sorted = [...player.hand].sort((a, b) => a.scoreValue - b.scoreValue);
-      const updatedPlayers = prev.players.map((p, idx) =>
-        idx === prev.currentPlayerIndex ? { ...p, hand: sorted } : p
-      );
+      const updatedPlayers = prev.players.map((p, idx) => (idx === myIdx ? { ...p, hand: sorted } : p));
       return { ...prev, players: updatedPlayers };
     });
   };
 
-  // Online Multiplayer Setup
-  const handleCreateOnlineRoom = async (roomCode: string, hostPlayerName: string, avatarId: string) => {
+  // ONLINE MULTIPLAYER: HOST CREATES ROOM
+  const handleCreateOnlineRoom = (roomCode: string, hostPlayerName: string, avatarId: string) => {
+    setOnlineIsHost(true);
     setOnlineRoomCode(roomCode);
+    setOnlineHostName(hostPlayerName);
+    setOnlineHostAvatar(avatarId);
+    setOnlineGuestName(null);
+    setOnlineGuestAvatar(null);
+    setOnlineError(null);
+    setOnlineIsConnecting(true);
+    setIsOnlineModalOpen(true);
+
     const p2p = new P2PManager({
-      onConnected: () => {
-        startNewGame('online', 2, 'medium', [hostPlayerName, "Do'st kutilmoqda..."], avatarId);
+      onHostReady: () => {
+        setOnlineIsConnecting(false);
       },
-      onPlayerJoined: (guestName) => {
-        setGameState((prev) => {
-          const updated = [...prev.players];
-          if (updated[1]) updated[1].name = guestName;
-          return {
-            ...prev,
-            players: updated,
-            logs: [
-              {
-                id: String(Date.now()),
-                timestamp: Date.now(),
-                text: `${guestName} onlayn o'yinga qo'shildi!`,
-                type: 'system',
-              },
-              ...prev.logs,
-            ],
-          };
-        });
+      onGuestConnected: (guestName, avatar) => {
+        sound.playTurnChime();
+        setOnlineGuestName(guestName);
+        setOnlineGuestAvatar(avatar);
       },
-      onMessageReceived: (msg) => {
+      onMessageReceived: (msg: NetworkMessage) => {
         if (msg.type === 'PLAY_CARD') {
-          executePlayCard(msg.payload.card, msg.payload.chosenColor);
+          executePlayCard(msg.payload.card, msg.payload.chosenColor, msg.payload.targetPlayerId);
         } else if (msg.type === 'DRAW_CARD') {
           handleDrawCard();
+        } else if (msg.type === 'CALL_UNO') {
+          handleSayUno();
+        } else if (msg.type === 'CHALLENGE_UNO') {
+          handleChallengeUno();
         }
+      },
+      onError: (errMsg) => {
+        setOnlineError(errMsg);
+        setOnlineIsConnecting(false);
+      },
+      onDisconnected: () => {
+        setOnlineError('Raqib xonadan chiqib ketdi yoki aloqa uzildi.');
       },
     });
 
     p2pRef.current = p2p;
-    try {
-      await p2p.createRoom(roomCode, hostPlayerName, avatarId);
-    } catch {
-      startNewGame('vs-bot', 2, 'medium', [hostPlayerName], avatarId);
-    }
+    p2p.createRoom(roomCode, hostPlayerName, avatarId).catch((err) => {
+      setOnlineError(err.message || 'Xona ochishda xatolik');
+      setOnlineIsConnecting(false);
+    });
   };
 
-  const handleJoinOnlineRoom = async (roomCode: string, guestPlayerName: string, avatarId: string) => {
+  // Host launches game with guest
+  const handleHostStartOnlineGame = () => {
+    if (!onlineGuestName) return;
+    setIsOnlineModalOpen(false);
+
+    const initialGame = startNewGame(
+      'online',
+      2,
+      'medium',
+      [onlineHostName, onlineGuestName],
+      onlineHostAvatar,
+      onlineGuestAvatar || 'alien'
+    );
+
+    // Broadcast initial state to guest
+    p2pRef.current?.syncState(initialGame);
+  };
+
+  // ONLINE MULTIPLAYER: GUEST JOINS ROOM
+  const handleJoinOnlineRoom = (roomCode: string, guestPlayerName: string, avatarId: string) => {
+    setOnlineIsHost(false);
     setOnlineRoomCode(roomCode);
+    setOnlineHostName('Host');
+    setOnlineHostAvatar('ninja');
+    setOnlineGuestName(guestPlayerName);
+    setOnlineGuestAvatar(avatarId);
+    setOnlineError(null);
+    setOnlineIsConnecting(true);
+    setIsOnlineModalOpen(true);
+
     const p2p = new P2PManager({
-      onConnected: () => {
-        startNewGame('online', 2, 'medium', ['Host', guestPlayerName], avatarId);
+      onConnectedToHost: () => {
+        sound.playClick();
+        setOnlineIsConnecting(false);
       },
-      onMessageReceived: (msg) => {
+      onMessageReceived: (msg: NetworkMessage) => {
         if (msg.type === 'SYNC_STATE') {
           setGameState(msg.payload);
+          setInGame(true);
+          setIsOnlineModalOpen(false);
+          sound.playCardSlide();
         }
+      },
+      onError: (errMsg) => {
+        setOnlineError(errMsg);
+        setOnlineIsConnecting(false);
+      },
+      onDisconnected: () => {
+        setOnlineError('Host bilan aloqa uzildi.');
       },
     });
 
     p2pRef.current = p2p;
-    try {
-      await p2p.joinRoom(roomCode, guestPlayerName, avatarId);
-    } catch {
-      alert("Xonaga ulanib bo'lmadi. Kodni tekshiring yoki internet aloqasini ko'ring.");
+    p2p.joinRoom(roomCode, guestPlayerName, avatarId).catch((err) => {
+      setOnlineError(err.message || 'Ulanishda xato');
+      setOnlineIsConnecting(false);
+    });
+  };
+
+  const handleCancelOnlineModal = () => {
+    if (p2pRef.current) {
+      p2pRef.current.destroy();
+      p2pRef.current = null;
     }
+    setIsOnlineModalOpen(false);
   };
 
   // Exit back to lobby
@@ -808,11 +946,13 @@ export function App() {
       }
       setInGame(false);
       setIsGameOverOpen(false);
+      setIsOnlineModalOpen(false);
     }
   };
 
-  // Current Player & Opponents
-  const currentPlayer = gameState.players[gameState.currentPlayerIndex] || {
+  // My player index: 0 in single-player/host; 1 if guest in online mode
+  const myPlayerIndex = gameState.mode === 'online' ? (onlineIsHost ? 0 : 1) : 0;
+  const myPlayer = gameState.players[myPlayerIndex] || {
     id: 'p0',
     name: 'You',
     avatar: 'ninja',
@@ -822,9 +962,9 @@ export function App() {
     score: 0,
   };
 
-  const isMyTurn = !currentPlayer.isBot;
-  const opponents = gameState.players.filter((_, idx) => idx !== 0);
-  const myPlayer = gameState.players[0] || currentPlayer;
+  const currentPlayer = gameState.players[gameState.currentPlayerIndex] || myPlayer;
+  const isMyTurn = gameState.currentPlayerIndex === myPlayerIndex;
+  const opponents = gameState.players.filter((_, idx) => idx !== myPlayerIndex);
   const topCard = gameState.discardPile[gameState.discardPile.length - 1] || null;
 
   // Check if player has any playable cards
@@ -866,7 +1006,7 @@ export function App() {
           {/* Dynamic Action Notification Banner */}
           <ActionBanner notice={currentNotice} lang={lang} />
 
-          {/* Opponents Ribbon at the top (Arranged symmetrically) */}
+          {/* Opponents Ribbon at the top */}
           <div className="w-full max-w-4xl mx-auto px-4 flex items-center justify-around gap-2 my-1">
             {opponents.map((opp) => (
               <OpponentHand
@@ -972,14 +1112,20 @@ export function App() {
             winner={gameState.winner}
             players={gameState.players}
             score={calculateRoundScore(gameState.players, gameState.winner?.id || '')}
-            onPlayAgain={() =>
-              startNewGame(
-                gameState.mode,
-                gameState.players.length,
-                'medium',
-                gameState.players.map((p) => p.name)
-              )
-            }
+            onPlayAgain={() => {
+              if (gameState.mode === 'online') {
+                if (onlineIsHost) {
+                  handleHostStartOnlineGame();
+                }
+              } else {
+                startNewGame(
+                  gameState.mode,
+                  gameState.players.length,
+                  'medium',
+                  gameState.players.map((p) => p.name)
+                );
+              }
+            }}
             onGoHome={() => {
               setIsGameOverOpen(false);
               setInGame(false);
@@ -988,6 +1134,22 @@ export function App() {
           />
         </div>
       )}
+
+      {/* Online Room Waiting Lobby Modal */}
+      <OnlineLobbyModal
+        isOpen={isOnlineModalOpen}
+        isHost={onlineIsHost}
+        roomCode={onlineRoomCode}
+        hostName={onlineHostName}
+        hostAvatar={onlineHostAvatar}
+        guestName={onlineGuestName}
+        guestAvatar={onlineGuestAvatar}
+        isConnecting={onlineIsConnecting}
+        errorMessage={onlineError}
+        onStartGame={handleHostStartOnlineGame}
+        onCancel={handleCancelOnlineModal}
+        lang={lang}
+      />
 
       {/* Global Settings & Rules Modals */}
       <SettingsModal

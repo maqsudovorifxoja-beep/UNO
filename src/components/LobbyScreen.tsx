@@ -47,11 +47,31 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>('medium');
 
   // Online Room State
-  const [roomCodeToJoin, setRoomCodeToJoin] = useState('');
+  const [roomCodeToJoin, setRoomCodeToJoin] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('room') || '';
+    } catch {
+      return '';
+    }
+  });
   const [customRoomCode] = useState(() => {
     return Math.floor(1000 + Math.random() * 9000).toString();
   });
   const [isCopied, setIsCopied] = useState(false);
+
+  React.useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const roomParam = params.get('room');
+      if (roomParam) {
+        setActiveTab('online');
+        setRoomCodeToJoin(roomParam.toUpperCase());
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // Pass and play names
   const [passNames, setPassNames] = useState<string[]>([

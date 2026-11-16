@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import type { BotDifficulty, GameMode, GameStats } from '../types/game';
 import { sound } from '../utils/sound';
+import { AVATAR_PRESETS } from '../utils/avatars';
+import { AvatarIcon } from './AvatarIcon';
 import {
   Bot,
   Wifi,
   Users,
   Play,
-  HelpCircle,
   Settings,
   Trophy,
   Copy,
@@ -14,12 +15,14 @@ import {
   User,
   Shield,
   Zap,
+  Sparkles,
+  BookOpen,
 } from 'lucide-react';
 
 interface LobbyScreenProps {
-  onStartVsBot: (playerCount: number, botDifficulty: BotDifficulty, playerName: string) => void;
-  onCreateOnlineRoom: (roomCode: string, playerName: string) => void;
-  onJoinOnlineRoom: (roomCode: string, playerName: string) => void;
+  onStartVsBot: (playerCount: number, botDifficulty: BotDifficulty, playerName: string, avatarId: string) => void;
+  onCreateOnlineRoom: (roomCode: string, playerName: string, avatarId: string) => void;
+  onJoinOnlineRoom: (roomCode: string, playerName: string, avatarId: string) => void;
   onStartPassAndPlay: (playerCount: number, playerNames: string[]) => void;
   onOpenRules: () => void;
   onOpenSettings: () => void;
@@ -39,6 +42,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<GameMode>('vs-bot');
   const [playerName, setPlayerName] = useState('O\'yinchi 1');
+  const [selectedAvatarId, setSelectedAvatarId] = useState('ninja');
   const [playerCount, setPlayerCount] = useState<number>(4);
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>('medium');
 
@@ -65,100 +69,153 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-between p-3 sm:p-6 bg-gradient-to-b from-slate-950 via-slate-900 to-[#0b0f19] select-none text-slate-200">
-      {/* Top Bar */}
+    <div className="min-h-screen w-full flex flex-col items-center justify-between p-3 sm:p-6 bg-gradient-to-b from-[#070a13] via-[#0b0f1d] to-[#04060b] select-none text-slate-100">
+      {/* Top Header Bar */}
       <header className="w-full max-w-4xl flex items-center justify-between py-2">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="px-3.5 py-1.5 bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 rounded-2xl shadow-xl shadow-red-950/60 border border-yellow-300/40 flex items-center gap-1.5">
-            <span className="font-black italic text-yellow-300 text-xl sm:text-2xl tracking-tighter drop-shadow font-mono">
+        <div className="flex items-center gap-3">
+          <div className="px-3.5 py-1.5 bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 rounded-2xl shadow-xl shadow-red-950/60 border-2 border-yellow-300/60 flex items-center gap-2">
+            <span className="font-black italic text-yellow-300 text-xl sm:text-2xl tracking-tighter drop-shadow-md font-mono">
               UNO
             </span>
-            <span className="text-[10px] font-black text-white uppercase tracking-wider bg-black/40 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-black text-slate-950 uppercase tracking-widest bg-yellow-400 px-1.5 py-0.5 rounded-md">
               PRO
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Quick Rules / How to play */}
           <button
             onClick={() => {
               sound.playClick();
               onOpenRules();
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs sm:text-sm font-semibold transition active:scale-95 cursor-pointer shadow"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 text-xs sm:text-sm font-bold transition active:scale-95 cursor-pointer shadow-lg"
           >
-            <HelpCircle size={16} />
+            <BookOpen size={16} className="text-yellow-400" />
             <span>{lang === 'uz' ? 'Qoidalar' : 'Rules'}</span>
           </button>
 
+          {/* Settings */}
           <button
             onClick={() => {
               sound.playClick();
               onOpenSettings();
             }}
-            className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition active:scale-95 cursor-pointer shadow"
+            aria-label="Sozlamalar"
+            className="p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition active:scale-95 cursor-pointer shadow-lg"
           >
             <Settings size={18} />
           </button>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="w-full max-w-xl flex flex-col items-center my-auto py-4">
-        {/* Animated Hero Card Emblem */}
-        <div className="relative mb-6 flex items-center justify-center">
-          <div className="absolute -inset-4 bg-gradient-to-r from-red-500 via-yellow-400 via-green-500 to-blue-500 rounded-3xl opacity-20 blur-xl animate-pulse" />
-          <div className="relative flex items-center -space-x-4 sm:-space-x-6">
-            <div className="w-16 h-24 sm:w-20 sm:h-28 rounded-xl bg-gradient-to-br from-red-600 to-rose-700 p-1 border-2 border-red-300 shadow-xl -rotate-12 transform hover:-translate-y-2 transition flex items-center justify-center">
-              <span className="font-mono font-black italic text-yellow-300 text-lg sm:text-xl">UNO</span>
+      {/* Main Center Area */}
+      <main className="w-full max-w-xl flex flex-col items-center my-auto py-3">
+        {/* Visual 3D Hero Cards Badge */}
+        <div className="relative mb-5 flex items-center justify-center">
+          <div className="absolute -inset-6 bg-gradient-to-r from-red-600 via-yellow-400 via-green-500 to-blue-600 rounded-full opacity-25 blur-2xl animate-pulse pointer-events-none" />
+          <div className="relative flex items-center -space-x-5 sm:-space-x-6">
+            <div className="w-16 h-24 sm:w-20 sm:h-29 rounded-2xl bg-gradient-to-br from-[#ff2d3d] to-[#a8000f] p-1 border-2 border-white/80 shadow-2xl -rotate-14 transform hover:-translate-y-2 transition flex flex-col justify-between">
+              <span className="font-mono font-black italic text-white text-xs pl-1">UNO</span>
+              <span className="font-mono font-black italic text-white text-2xl sm:text-3xl self-center">7</span>
+              <span className="font-mono font-black italic text-white text-xs pr-1 self-end rotate-180">UNO</span>
             </div>
-            <div className="w-16 h-24 sm:w-20 sm:h-28 rounded-xl bg-gradient-to-br from-blue-600 to-sky-700 p-1 border-2 border-blue-300 shadow-xl -rotate-3 transform hover:-translate-y-2 transition z-10 flex items-center justify-center">
-              <span className="font-mono font-black text-white text-2xl sm:text-3xl">+2</span>
+            <div className="w-16 h-24 sm:w-20 sm:h-29 rounded-2xl bg-gradient-to-br from-[#0094ff] to-[#00389b] p-1 border-2 border-white/80 shadow-2xl -rotate-4 transform hover:-translate-y-2 transition z-10 flex flex-col justify-between">
+              <span className="font-mono font-black text-white text-xs pl-1">+2</span>
+              <span className="font-mono font-black text-white text-2xl sm:text-3xl self-center">+2</span>
+              <span className="font-mono font-black text-white text-xs pr-1 self-end rotate-180">+2</span>
             </div>
-            <div className="w-16 h-24 sm:w-20 sm:h-28 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 p-1 border-2 border-yellow-200 shadow-xl rotate-6 transform hover:-translate-y-2 transition z-20 flex items-center justify-center">
-              <span className="font-mono font-black text-slate-900 text-2xl sm:text-3xl">7</span>
+            <div className="w-16 h-24 sm:w-20 sm:h-29 rounded-2xl bg-gradient-to-br from-[#ffd000] to-[#b87c00] p-1 border-2 border-white/80 shadow-2xl rotate-6 transform hover:-translate-y-2 transition z-20 flex flex-col justify-between">
+              <span className="font-mono font-black text-slate-900 text-xs pl-1">0</span>
+              <span className="font-mono font-black text-slate-900 text-2xl sm:text-3xl self-center">0</span>
+              <span className="font-mono font-black text-slate-900 text-xs pr-1 self-end rotate-180">0</span>
             </div>
-            <div className="w-16 h-24 sm:w-20 sm:h-28 rounded-xl bg-gradient-to-br from-emerald-600 to-green-700 p-1 border-2 border-green-300 shadow-xl rotate-16 transform hover:-translate-y-2 transition z-10 flex items-center justify-center">
-              <Zap size={28} className="text-white" />
+            <div className="w-16 h-24 sm:w-20 sm:h-29 rounded-2xl bg-gradient-to-br from-[#1ddc62] to-[#04772d] p-1 border-2 border-white/80 shadow-2xl rotate-16 transform hover:-translate-y-2 transition z-10 flex flex-col justify-between">
+              <Sparkles size={16} className="text-white pl-0.5" />
+              <Zap size={28} className="text-white self-center animate-pulse" />
+              <Sparkles size={16} className="text-white pr-0.5 self-end rotate-180" />
             </div>
           </div>
         </div>
 
-        {/* Player Name Input */}
-        <div className="w-full mb-4 px-2">
-          <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 text-center">
-            {lang === 'uz' ? 'O\'yinchi Ismi:' : 'Player Name:'}
-          </label>
-          <div className="relative max-w-xs mx-auto">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-              <User size={16} />
+        {/* Player Profile & Avatar Selector Box */}
+        <div className="w-full bg-slate-900/90 border-2 border-slate-800 rounded-3xl p-4 sm:p-5 shadow-2xl mb-4 backdrop-blur-md">
+          <div className="flex flex-col sm:flex-row items-center gap-3.5">
+            {/* Avatar preview */}
+            <div className="relative group cursor-pointer">
+              <AvatarIcon avatarId={selectedAvatarId} size={28} className="shadow-xl" />
+              <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-slate-950 p-1 rounded-full shadow">
+                <Sparkles size={12} />
+              </div>
             </div>
-            <input
-              type="text"
-              value={playerName}
-              maxLength={15}
-              onChange={(e) => setPlayerName(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 bg-slate-900/90 border border-slate-700 focus:border-yellow-400 rounded-2xl text-center font-bold text-white shadow-inner focus:outline-none transition"
-              placeholder={lang === 'uz' ? 'Ismingizni yozing' : 'Enter your name'}
-            />
+
+            {/* Name input */}
+            <div className="flex-1 w-full text-left">
+              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                {lang === 'uz' ? 'Ismingizni kiriting:' : 'Enter your player name:'}
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <User size={16} />
+                </div>
+                <input
+                  type="text"
+                  maxLength={15}
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 focus:border-yellow-400 rounded-xl font-bold text-white shadow-inner focus:outline-none transition"
+                  placeholder={lang === 'uz' ? 'Ismingiz' : 'Your name'}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Avatar Picker Row */}
+          <div className="mt-3.5 pt-3 border-t border-slate-800">
+            <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 text-left">
+              {lang === 'uz' ? 'Qahramoningizni tanlang:' : 'Choose your avatar:'}
+            </span>
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+              {AVATAR_PRESETS.map((av) => (
+                <button
+                  key={av.id}
+                  onClick={() => {
+                    sound.playClick();
+                    setSelectedAvatarId(av.id);
+                  }}
+                  className={`flex flex-col items-center p-1.5 rounded-xl border transition cursor-pointer ${
+                    selectedAvatarId === av.id
+                      ? 'border-yellow-400 bg-yellow-400/10 ring-2 ring-yellow-400/50 scale-105'
+                      : 'border-slate-800 bg-slate-950/60 hover:bg-slate-800'
+                  }`}
+                  title={lang === 'uz' ? av.nameUz : av.nameEn}
+                >
+                  <AvatarIcon avatarId={av.id} size={15} showBadge={false} />
+                  <span className="text-[9px] font-bold mt-1 text-slate-300 truncate w-full text-center">
+                    {lang === 'uz' ? av.nameUz.split(' ')[0] : av.nameEn.split(' ')[0]}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Game Mode Tab Bar */}
-        <div className="w-full grid grid-cols-3 gap-1.5 p-1 bg-slate-900/80 border border-slate-800 rounded-2xl mb-5 shadow-lg">
+        {/* Game Mode Tabs */}
+        <div className="w-full grid grid-cols-3 gap-1.5 p-1.5 bg-slate-900/90 border border-slate-800 rounded-2xl mb-4 shadow-xl">
           <button
             onClick={() => {
               sound.playClick();
               setActiveTab('vs-bot');
             }}
-            className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer ${
+            className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
               activeTab === 'vs-bot'
-                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            <Bot size={16} />
-            <span>{lang === 'uz' ? 'Vs Bot' : 'Vs Bots'}</span>
+            <Bot size={17} />
+            <span>{lang === 'uz' ? 'Vs Bot' : 'Vs AI Bots'}</span>
           </button>
 
           <button
@@ -166,14 +223,14 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
               sound.playClick();
               setActiveTab('online');
             }}
-            className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer ${
+            className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
               activeTab === 'online'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            <Wifi size={16} />
-            <span>{lang === 'uz' ? 'Onlayn Xona' : 'Online P2P'}</span>
+            <Wifi size={17} />
+            <span>{lang === 'uz' ? 'Onlayn Xona' : 'Online Room'}</span>
           </button>
 
           <button
@@ -181,24 +238,24 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
               sound.playClick();
               setActiveTab('pass-and-play');
             }}
-            className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer ${
+            className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
               activeTab === 'pass-and-play'
-                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            <Users size={16} />
+            <Users size={17} />
             <span>{lang === 'uz' ? 'Pass & Play' : 'Pass & Play'}</span>
           </button>
         </div>
 
-        {/* Tab 1: Vs Bot Mode */}
+        {/* TAB 1: VS BOT MODE */}
         {activeTab === 'vs-bot' && (
-          <div className="w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-5 animate-fadeIn">
+          <div className="w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4 animate-fadeIn">
             {/* Player Count */}
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                {lang === 'uz' ? "O'yinchilar soni (Siz + Botlar)" : 'Players Count'}
+              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2 text-left">
+                {lang === 'uz' ? "O'yinchilar soni (Siz + Botlar):" : 'Number of Players:'}
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {[2, 3, 4].map((count) => (
@@ -208,10 +265,10 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
                       sound.playClick();
                       setPlayerCount(count);
                     }}
-                    className={`py-2.5 rounded-xl border text-sm font-bold transition cursor-pointer ${
+                    className={`py-2.5 rounded-xl border-2 text-xs sm:text-sm font-black transition cursor-pointer ${
                       playerCount === count
-                        ? 'border-cyan-400 bg-cyan-950/60 text-cyan-300 ring-1 ring-cyan-400'
-                        : 'border-slate-800 bg-slate-800/40 text-slate-400 hover:bg-slate-800'
+                        ? 'border-cyan-400 bg-cyan-950/60 text-cyan-300 ring-2 ring-cyan-400/40'
+                        : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:bg-slate-800'
                     }`}
                   >
                     {count} {lang === 'uz' ? "O'yinchi" : 'Players'}
@@ -222,8 +279,8 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
 
             {/* Bot Difficulty */}
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                {lang === 'uz' ? 'Bot Darajasi (Aqllilik darajasi)' : 'Bot Difficulty'}
+              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2 text-left">
+                {lang === 'uz' ? 'Bot Aqli (Qiyinlik darajasi):' : 'Bot AI Level:'}
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {(
@@ -239,10 +296,10 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
                       sound.playClick();
                       setBotDifficulty(d.id);
                     }}
-                    className={`py-2.5 rounded-xl border text-xs sm:text-sm font-bold transition cursor-pointer ${
+                    className={`py-2.5 rounded-xl border-2 text-xs sm:text-sm font-black transition cursor-pointer ${
                       botDifficulty === d.id
-                        ? 'border-yellow-400 bg-yellow-950/40 text-yellow-300 ring-1 ring-yellow-400'
-                        : 'border-slate-800 bg-slate-800/40 text-slate-400 hover:bg-slate-800'
+                        ? 'border-yellow-400 bg-yellow-950/50 text-yellow-300 ring-2 ring-yellow-400/40'
+                        : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:bg-slate-800'
                     }`}
                   >
                     {lang === 'uz' ? d.labelUz : d.labelEn}
@@ -251,36 +308,36 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
               </div>
             </div>
 
-            {/* Start Button */}
+            {/* Launch Game Button */}
             <button
               onClick={() => {
                 sound.playClick();
-                onStartVsBot(playerCount, botDifficulty, playerName || 'O\'yinchi');
+                onStartVsBot(playerCount, botDifficulty, playerName || 'O\'yinchi', selectedAvatarId);
               }}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-black text-base sm:text-lg shadow-xl shadow-red-950/50 flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer"
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-black text-base sm:text-lg shadow-2xl shadow-red-950/80 flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer border border-yellow-300/40"
             >
-              <Play size={20} fill="currentColor" />
+              <Play size={22} fill="currentColor" />
               <span>{lang === 'uz' ? 'O\'YINNI BOSHLASH' : 'START GAME'}</span>
             </button>
           </div>
         )}
 
-        {/* Tab 2: Online P2P Mode */}
+        {/* TAB 2: ONLINE MULTIPLAYER */}
         {activeTab === 'online' && (
-          <div className="w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-5 animate-fadeIn">
-            {/* Create Room Box */}
-            <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-700/80">
-              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <Wifi size={14} className="text-emerald-400" />
-                {lang === 'uz' ? 'Yangi Onlayn Xona Ochish' : 'Create an Online Room'}
+          <div className="w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4 animate-fadeIn">
+            {/* Create Room */}
+            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800">
+              <h4 className="text-xs font-black text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1.5 text-left">
+                <Wifi size={14} />
+                {lang === 'uz' ? 'Yangi Onlayn Xona Yaratish' : 'Create an Online Room'}
               </h4>
               <div className="flex items-center gap-2 mb-3">
-                <div className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 font-mono font-black text-center text-emerald-400 text-lg tracking-widest">
+                <div className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 font-mono font-black text-center text-emerald-400 text-lg tracking-widest">
                   {customRoomCode}
                 </div>
                 <button
                   onClick={copyCode}
-                  className="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl flex items-center gap-1 text-xs font-semibold cursor-pointer active:scale-95"
+                  className="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl flex items-center gap-1 text-xs font-bold cursor-pointer active:scale-95"
                 >
                   {isCopied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
                   <span>{isCopied ? (lang === 'uz' ? 'Nusxalandi' : 'Copied') : (lang === 'uz' ? 'Nusxa' : 'Copy')}</span>
@@ -289,19 +346,19 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
               <button
                 onClick={() => {
                   sound.playClick();
-                  onCreateOnlineRoom(customRoomCode, playerName || 'Host');
+                  onCreateOnlineRoom(customRoomCode, playerName || 'Host', selectedAvatarId);
                 }}
                 className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow transition active:scale-98 cursor-pointer"
               >
-                {lang === 'uz' ? 'Xonani yaratish va kutish' : 'Create & Host Room'}
+                {lang === 'uz' ? 'Xonani ochish' : 'Open Room'}
               </button>
             </div>
 
-            {/* Join Room Box */}
-            <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-700/80">
-              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <Zap size={14} className="text-cyan-400" />
-                {lang === 'uz' ? 'Mavjud Xonaga Ulanish' : 'Join Existing Room'}
+            {/* Join Room */}
+            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800">
+              <h4 className="text-xs font-black text-cyan-400 uppercase tracking-wider mb-2 flex items-center gap-1.5 text-left">
+                <Zap size={14} />
+                {lang === 'uz' ? 'Do\'stning Xonasiga Kirish' : 'Join Friend\'s Room'}
               </h4>
               <div className="flex items-center gap-2 mb-3">
                 <input
@@ -310,14 +367,14 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
                   placeholder={lang === 'uz' ? '4-xonalik kod (masalan: 8421)' : 'Room code'}
                   value={roomCodeToJoin}
                   onChange={(e) => setRoomCodeToJoin(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-slate-700 focus:border-cyan-400 rounded-xl px-3 py-2 font-mono font-bold text-center text-white placeholder:text-slate-600 text-base uppercase focus:outline-none"
+                  className="flex-1 bg-slate-900 border border-slate-700 focus:border-cyan-400 rounded-xl px-3 py-2 font-mono font-bold text-center text-white placeholder:text-slate-600 text-base uppercase focus:outline-none"
                 />
               </div>
               <button
                 disabled={!roomCodeToJoin.trim()}
                 onClick={() => {
                   sound.playClick();
-                  onJoinOnlineRoom(roomCodeToJoin.trim(), playerName || 'O\'yinchi 2');
+                  onJoinOnlineRoom(roomCodeToJoin.trim(), playerName || 'O\'yinchi 2', selectedAvatarId);
                 }}
                 className={`w-full py-2.5 rounded-xl text-white font-bold text-sm shadow transition active:scale-98 ${
                   roomCodeToJoin.trim()
@@ -325,20 +382,20 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
                     : 'bg-slate-800 text-slate-500 cursor-not-allowed'
                 }`}
               >
-                {lang === 'uz' ? 'Xonaga kirish' : 'Join Room'}
+                {lang === 'uz' ? 'Ulanish' : 'Join'}
               </button>
             </div>
           </div>
         )}
 
-        {/* Tab 3: Pass & Play Mode */}
+        {/* TAB 3: PASS & PLAY */}
         {activeTab === 'pass-and-play' && (
-          <div className="w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-5 animate-fadeIn">
+          <div className="w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4 animate-fadeIn">
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                {lang === 'uz' ? "O'yinchilar soni (Bitta qurilmada)" : 'Number of Players (One Device)'}
+              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2 text-left">
+                {lang === 'uz' ? "O'yinchilar soni (Bitta telefonda):" : 'Number of Players (One Device):'}
               </label>
-              <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="grid grid-cols-3 gap-2 mb-3">
                 {[2, 3, 4].map((count) => (
                   <button
                     key={count}
@@ -346,10 +403,10 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
                       sound.playClick();
                       setPlayerCount(count);
                     }}
-                    className={`py-2 rounded-xl border text-sm font-bold transition cursor-pointer ${
+                    className={`py-2 rounded-xl border-2 text-sm font-bold transition cursor-pointer ${
                       playerCount === count
-                        ? 'border-purple-400 bg-purple-950/60 text-purple-300 ring-1 ring-purple-400'
-                        : 'border-slate-800 bg-slate-800/40 text-slate-400 hover:bg-slate-800'
+                        ? 'border-purple-400 bg-purple-950/60 text-purple-300 ring-2 ring-purple-400/40'
+                        : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:bg-slate-800'
                     }`}
                   >
                     {count} {lang === 'uz' ? "O'yinchi" : 'Players'}
@@ -392,8 +449,8 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
         )}
       </main>
 
-      {/* Footer / Stats Ribbon */}
-      <footer className="w-full max-w-4xl py-3 border-t border-slate-800/60 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
+      {/* Footer / Statistics Ribbon */}
+      <footer className="w-full max-w-4xl py-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
             <Trophy size={14} className="text-yellow-400" />

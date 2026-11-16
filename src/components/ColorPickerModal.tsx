@@ -40,29 +40,71 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
 
   if (!isOpen) return null;
 
-  const colors: { id: CardColor; labelUz: string; labelEn: string; bg: string; key: string }[] = [
-    { id: 'red', labelUz: 'Qizil', labelEn: 'Red', bg: 'bg-gradient-to-br from-red-500 to-rose-700 hover:from-red-400 hover:to-rose-600 border-red-400', key: '1 / R' },
-    { id: 'blue', labelUz: "Ko'k", labelEn: 'Blue', bg: 'bg-gradient-to-br from-blue-500 to-sky-700 hover:from-blue-400 hover:to-sky-600 border-blue-400', key: '2 / B' },
-    { id: 'green', labelUz: 'Yashil', labelEn: 'Green', bg: 'bg-gradient-to-br from-emerald-500 to-green-700 hover:from-emerald-400 hover:to-green-600 border-emerald-400', key: '3 / G' },
-    { id: 'yellow', labelUz: 'Sariq', labelEn: 'Yellow', bg: 'bg-gradient-to-br from-yellow-400 to-amber-600 hover:from-yellow-300 hover:to-amber-500 border-yellow-300 text-slate-900', key: '4 / Y' },
+  const colors: {
+    id: CardColor;
+    labelUz: string;
+    labelEn: string;
+    bgGradient: string;
+    border: string;
+    shadow: string;
+    key: string;
+  }[] = [
+    {
+      id: 'red',
+      labelUz: 'QIZIL',
+      labelEn: 'RED',
+      bgGradient: 'from-[#ff2d3d] via-[#e51323] to-[#a8000f]',
+      border: 'border-red-300',
+      shadow: 'shadow-red-500/40 hover:shadow-red-500/70',
+      key: '1 / R',
+    },
+    {
+      id: 'blue',
+      labelUz: "KO'K",
+      labelEn: 'BLUE',
+      bgGradient: 'from-[#0094ff] via-[#005fec] to-[#00389b]',
+      border: 'border-blue-300',
+      shadow: 'shadow-blue-500/40 hover:shadow-blue-500/70',
+      key: '2 / B',
+    },
+    {
+      id: 'green',
+      labelUz: 'YASHIL',
+      labelEn: 'GREEN',
+      bgGradient: 'from-[#1ddc62] via-[#0bbd4a] to-[#04772d]',
+      border: 'border-emerald-300',
+      shadow: 'shadow-emerald-500/40 hover:shadow-emerald-500/70',
+      key: '3 / G',
+    },
+    {
+      id: 'yellow',
+      labelUz: 'SARIQ',
+      labelEn: 'YELLOW',
+      bgGradient: 'from-[#ffea00] via-[#ffd000] to-[#d99800]',
+      border: 'border-yellow-200',
+      shadow: 'shadow-amber-400/50 hover:shadow-amber-400/80',
+      key: '4 / Y',
+    },
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-sm sm:max-w-md bg-slate-900/95 border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl text-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+      <div className="relative w-full max-w-sm sm:max-w-md bg-slate-900 border-2 border-yellow-400/80 rounded-3xl p-6 sm:p-7 shadow-2xl text-center">
         {/* Glow halo */}
-        <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-red-500 via-yellow-400 via-green-500 to-blue-500 opacity-20 blur-xl pointer-events-none" />
+        <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-red-500 via-yellow-400 via-green-500 to-blue-500 opacity-25 blur-xl pointer-events-none" />
 
         <div className="relative z-10">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-slate-800 border border-slate-700 text-yellow-400 mb-4 shadow-inner">
-            <Palette size={32} />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-slate-800 border-2 border-yellow-400 text-yellow-300 mb-3 shadow-xl">
+            <Palette size={30} />
           </div>
 
-          <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight mb-2">
-            {lang === 'uz' ? 'Rangni tanlang' : 'Choose a Color'}
+          <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight mb-1">
+            {lang === 'uz' ? 'Yangi Rangni Tanlang' : 'Choose Next Color'}
           </h2>
-          <p className="text-sm text-slate-400 mb-6">
-            {lang === 'uz' ? 'O\'yin davom etishi uchun qaysi rangni tanlaysiz?' : 'Which color should continue the game?'}
+          <p className="text-xs sm:text-sm text-slate-300 mb-5">
+            {lang === 'uz'
+              ? "O'yin qaysi rang bilan davom etsin?"
+              : 'Which color should the next card match?'}
           </p>
 
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
@@ -73,12 +115,12 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
                   sound.playClick();
                   onSelectColor(c.id);
                 }}
-                className={`relative flex flex-col items-center justify-center p-5 sm:p-6 rounded-2xl border-2 shadow-lg transition-all transform active:scale-95 hover:scale-105 ${c.bg} group cursor-pointer`}
+                className={`relative flex flex-col items-center justify-center p-5 sm:p-6 rounded-2xl border-2 shadow-xl transition-all transform active:scale-95 hover:scale-105 bg-gradient-to-br ${c.bgGradient} ${c.border} ${c.shadow} cursor-pointer group`}
               >
-                <span className="font-black text-lg sm:text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] text-white">
+                <span className="font-black text-lg sm:text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-white tracking-wider">
                   {lang === 'uz' ? c.labelUz : c.labelEn}
                 </span>
-                <span className="mt-1 text-[11px] font-mono font-medium opacity-80 text-white/90 bg-black/30 px-2 py-0.5 rounded-full">
+                <span className="mt-1 text-[10px] font-mono font-bold text-white/90 bg-black/40 px-2 py-0.5 rounded-full">
                   {c.key}
                 </span>
               </button>

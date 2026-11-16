@@ -29,6 +29,7 @@ import { GameOverModal } from './components/GameOverModal';
 import { PassCurtainModal } from './components/PassCurtainModal';
 import { HandSwapModal } from './components/HandSwapModal';
 import { ReactionPicker } from './components/ReactionPicker';
+import { ActionBanner, type ActionNotice } from './components/ActionBanner';
 
 const DEFAULT_HOUSE_RULES: HouseRules = {
   stacking: true,
@@ -38,7 +39,11 @@ const DEFAULT_HOUSE_RULES: HouseRules = {
   forcePlay: false,
 };
 
-const BOT_NAMES = ['Cyber Bot', 'Robo Master', 'Tactician AI', 'Neon Ninja'];
+const BOT_CONFIGS = [
+  { name: 'Kiber Bot', avatar: 'bot' },
+  { name: 'Ayyor Tulki', avatar: 'fox' },
+  { name: 'Sehrgar Master', avatar: 'wizard' },
+];
 
 const BOT_REACTIONS_ATTACKED = ['😱 Voybo\'!', '😡 Qarab tur!', '🤖 Tizim xatosi!', '💥 Ouch!'];
 const BOT_REACTIONS_VICTORY = ['🔥 UNO!', '😎 Oson bo\'ldi!', '🚀 G\'alaba yaqin!', '✨ Genial!'];
@@ -52,8 +57,9 @@ export function App() {
   const [isMuted, setIsMuted] = useState(() => sound.getMuted());
   const [volume, setVolume] = useState(() => sound.getVolume());
 
-  // Reactions state
+  // Reactions & Action Banner
   const [reactions, setReactions] = useState<Record<string, string | null>>({});
+  const [currentNotice, setCurrentNotice] = useState<ActionNotice | null>(null);
 
   // Modals
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -106,12 +112,20 @@ export function App() {
   const p2pRef = useRef<P2PManager | null>(null);
   const [onlineRoomCode, setOnlineRoomCode] = useState<string>('');
 
+  // Show prominent action notice banner
+  const triggerActionNotice = useCallback((notice: ActionNotice) => {
+    setCurrentNotice(notice);
+    setTimeout(() => {
+      setCurrentNotice((prev) => (prev?.id === notice.id ? null : prev));
+    }, 2800);
+  }, []);
+
   // Trigger Reaction helper
   const triggerReaction = useCallback((playerId: string, reactionText: string) => {
     setReactions((prev) => ({ ...prev, [playerId]: reactionText }));
     setTimeout(() => {
       setReactions((prev) => ({ ...prev, [playerId]: null }));
-    }, 3200);
+    }, 3000);
   }, []);
 
   // Persist stats
@@ -143,18 +157,22 @@ export function App() {
       mode: GameMode,
       playerCount: number,
       botDifficulty: BotDifficulty = 'medium',
-      customNames: string[] = []
+      customNames: string[] = [],
+      humanAvatarId: string = 'ninja'
     ) => {
       const deck = generateDeck();
       const players: Player[] = [];
 
       for (let i = 0; i < playerCount; i++) {
         const isBot = mode === 'vs-bot' ? i > 0 : false;
-        const name = customNames[i] || (isBot ? BOT_NAMES[i - 1] : `O'yinchi ${i + 1}`);
+        const botConfig = isBot ? BOT_CONFIGS[(i - 1) % BOT_CONFIGS.length] : null;
+        const name = customNames[i] || (isBot ? botConfig?.name || `Bot ${i}` : `O'yinchi ${i + 1}`);
+        const avatar = isBot ? botConfig?.avatar || 'bot' : humanAvatarId;
+
         players.push({
           id: `player-${i}`,
           name,
-          avatar: `avatar-${i}`,
+          avatar,
           isBot,
           botDifficulty: isBot ? botDifficulty : undefined,
           hand: deck.splice(0, 7),
@@ -199,8 +217,17 @@ export function App() {
       setInGame(true);
       setIsGameOverOpen(false);
       sound.playCardSlide();
+
+      triggerActionNotice({
+        id: String(Date.now()),
+        type: 'turn',
+        titleUz: 'O\'YIN BOSHLANDI!',
+        titleEn: 'GAME STARTED!',
+        subtitleUz: `Birinchi karta: ${initialTopCard.color.toUpperCase()} ${initialTopCard.value}`,
+        subtitleEn: `Top card: ${initialTopCard.color.toUpperCase()} ${initialTopCard.value}`,
+      });
     },
-    [houseRules, lang]
+    [houseRules, lang, triggerActionNotice]
   );
 
   // Reshuffle draw pile when empty
@@ -238,7 +265,7 @@ export function App() {
             return {
               ...p,
               hand: [...p.hand, ...drawnCards],
-              hasSaidUno: false, // drawing resets uno
+              hasSaidUno: false,
             };
           }
           return p;
@@ -295,18 +322,6 @@ export function App() {
         const newHand = player.hand.filter((c) => c.id !== card.id);
         const willHaveOneCard = newHand.length === 1;
 
-        // Sound effects
-        if (card.value === 'skip') sound.playSkip();
-        else if (card.value === 'reverse') sound.playReverse();
-        else if (card.value === 'draw2') sound.playDrawAttack(false);
-        else if (card.value === 'wild') sound.playWild();
-        else if (card.value === 'wild4') {
-          sound.playWild();
-          sound.playDrawAttack(true);
-        } else {
-          sound.playCardSnap();
-        }
-
         // Active color
         const newColor: CardColor = card.color === 'wild' ? chosenColor || 'red' : card.color;
 
@@ -321,7 +336,6 @@ export function App() {
 
         if (card.value === 'reverse') {
           if (prev.players.length === 2) {
-            // In 2-player UNO, Reverse acts as a Skip
             skipCount = 2;
           } else {
             newDirection = (newDirection * -1) as 1 | -1;
@@ -329,6 +343,53 @@ export function App() {
           }
         } else if (card.value === 'skip') {
           skipCount = 2;
+        }
+
+        // Trigger dynamic banner notices based on card played
+        if (card.value === 'skip') {
+          sound.playSkip();
+          triggerActionNotice({
+            id: String(Date.now()),
+            type: 'skip',
+            titleUz: `${player.name}: SKIP!`,
+            titleEn: `${player.name}: SKIP!`,
+            subtitleUz: 'Keyingi o\'yinchi navbatini o\'tkazadi',
+            subtitleEn: 'Next player is skipped',
+          });
+        } else if (card.value === 'reverse') {
+          sound.playReverse();
+          triggerActionNotice({
+            id: String(Date.now()),
+            type: 'reverse',
+            titleUz: 'YO\'NALISH O\'ZGARDI!',
+            titleEn: 'DIRECTION REVERSED!',
+            subtitleUz: newDirection === 1 ? 'Soat yo\'nalishi' : 'Teskari yo\'nalish',
+            subtitleEn: newDirection === 1 ? 'Clockwise' : 'Counter-clockwise',
+          });
+        } else if (card.value === 'draw2') {
+          sound.playDrawAttack(false);
+          triggerActionNotice({
+            id: String(Date.now()),
+            type: 'attack',
+            titleUz: `${player.name}: +2 JARIMA!`,
+            titleEn: `${player.name}: DRAW 2!`,
+            subtitleUz: `Jarima miqdori: +${newActiveStack}`,
+            subtitleEn: `Total stack: +${newActiveStack}`,
+          });
+        } else if (card.value === 'wild' || card.value === 'wild4') {
+          sound.playWild();
+          if (card.value === 'wild4') sound.playDrawAttack(true);
+          triggerActionNotice({
+            id: String(Date.now()),
+            type: 'color',
+            titleUz: `YANGI RANG: ${newColor.toUpperCase()}`,
+            titleEn: `NEW COLOR: ${newColor.toUpperCase()}`,
+            subtitleUz: card.value === 'wild4' ? `+4 Jarima berildi! (+${newActiveStack})` : undefined,
+            subtitleEn: card.value === 'wild4' ? `+4 Attack applied! (+${newActiveStack})` : undefined,
+            color: newColor,
+          });
+        } else {
+          sound.playCardSnap();
         }
 
         // Check 7-0 Hand Swap rule
@@ -344,7 +405,6 @@ export function App() {
         });
 
         if (prev.houseRules.sevenZero && card.value === '7' && targetPlayerId) {
-          // Swap hands between current player and target
           const targetIndex = updatedPlayers.findIndex((p) => p.id === targetPlayerId);
           if (targetIndex !== -1) {
             const temp = updatedPlayers[prev.currentPlayerIndex].hand;
@@ -352,7 +412,6 @@ export function App() {
             updatedPlayers[targetIndex].hand = temp;
           }
         } else if (prev.houseRules.sevenZero && card.value === '0') {
-          // Rotate all hands in current direction
           const hands = updatedPlayers.map((p) => p.hand);
           updatedPlayers = updatedPlayers.map((p, idx) => {
             const fromIdx =
@@ -400,7 +459,7 @@ export function App() {
           skipCount
         );
 
-        // Next player bot reactions
+        // Next player bot reactions if under attack
         const nextP = updatedPlayers[nextIdx];
         if (nextP && nextP.isBot && (card.value === 'draw2' || card.value === 'wild4' || card.value === 'skip')) {
           const randReact = BOT_REACTIONS_ATTACKED[Math.floor(Math.random() * BOT_REACTIONS_ATTACKED.length)];
@@ -442,14 +501,13 @@ export function App() {
         };
       });
     },
-    [lang, triggerReaction, updateStats]
+    [lang, triggerActionNotice, triggerReaction, updateStats]
   );
 
   /**
    * Jump-In: Play exact matching card out of turn
    */
   const handleJumpIn = (card: Card) => {
-    // Jump in sets turn to human player (index 0) and plays card immediately
     setGameState((prev) => ({
       ...prev,
       currentPlayerIndex: 0,
@@ -524,6 +582,14 @@ export function App() {
       });
 
       triggerReaction(currentPlayer.id, '🔥 UNO!');
+      triggerActionNotice({
+        id: String(Date.now()),
+        type: 'uno',
+        titleUz: `${currentPlayer.name}: 'UNO!'`,
+        titleEn: `${currentPlayer.name}: 'UNO!'`,
+        subtitleUz: '1 ta karta qoldi!',
+        subtitleEn: 'Only 1 card remaining!',
+      });
 
       return {
         ...prev,
@@ -567,6 +633,14 @@ export function App() {
       });
 
       triggerReaction(targetPlayer.id, '😱 +2 Jarima!');
+      triggerActionNotice({
+        id: String(Date.now()),
+        type: 'challenge',
+        titleUz: `${targetPlayer.name} FOSH BO'LDI!`,
+        titleEn: `${targetPlayer.name} CAUGHT!`,
+        subtitleUz: 'UNO demagani uchun +2 jarima kartasi oldi',
+        subtitleEn: 'Draws 2 penalty cards for forgetting UNO',
+      });
 
       return {
         ...prev,
@@ -617,7 +691,6 @@ export function App() {
         if (decision.shouldCallUno) {
           sound.playUnoCall();
           triggerReaction(currentPlayer.id, '🔥 UNO!');
-          // Bot declared UNO
           setGameState((prev) => ({
             ...prev,
             players: prev.players.map((p) =>
@@ -663,11 +736,11 @@ export function App() {
   };
 
   // Online Multiplayer Setup
-  const handleCreateOnlineRoom = async (roomCode: string, hostPlayerName: string) => {
+  const handleCreateOnlineRoom = async (roomCode: string, hostPlayerName: string, avatarId: string) => {
     setOnlineRoomCode(roomCode);
     const p2p = new P2PManager({
       onConnected: () => {
-        startNewGame('online', 2, 'medium', [hostPlayerName, "Do'st kutilmoqda..."]);
+        startNewGame('online', 2, 'medium', [hostPlayerName, "Do'st kutilmoqda..."], avatarId);
       },
       onPlayerJoined: (guestName) => {
         setGameState((prev) => {
@@ -699,18 +772,17 @@ export function App() {
 
     p2pRef.current = p2p;
     try {
-      await p2p.createRoom(roomCode, hostPlayerName, 'avatar-0');
+      await p2p.createRoom(roomCode, hostPlayerName, avatarId);
     } catch {
-      // Fallback: start vs bot if peer connection encounters network issues
-      startNewGame('vs-bot', 2, 'medium', [hostPlayerName]);
+      startNewGame('vs-bot', 2, 'medium', [hostPlayerName], avatarId);
     }
   };
 
-  const handleJoinOnlineRoom = async (roomCode: string, guestPlayerName: string) => {
+  const handleJoinOnlineRoom = async (roomCode: string, guestPlayerName: string, avatarId: string) => {
     setOnlineRoomCode(roomCode);
     const p2p = new P2PManager({
       onConnected: () => {
-        startNewGame('online', 2, 'medium', ['Host', guestPlayerName]);
+        startNewGame('online', 2, 'medium', ['Host', guestPlayerName], avatarId);
       },
       onMessageReceived: (msg) => {
         if (msg.type === 'SYNC_STATE') {
@@ -721,7 +793,7 @@ export function App() {
 
     p2pRef.current = p2p;
     try {
-      await p2p.joinRoom(roomCode, guestPlayerName, 'avatar-1');
+      await p2p.joinRoom(roomCode, guestPlayerName, avatarId);
     } catch {
       alert("Xonaga ulanib bo'lmadi. Kodni tekshiring yoki internet aloqasini ko'ring.");
     }
@@ -743,7 +815,7 @@ export function App() {
   const currentPlayer = gameState.players[gameState.currentPlayerIndex] || {
     id: 'p0',
     name: 'You',
-    avatar: 'a0',
+    avatar: 'ninja',
     isBot: false,
     hand: [],
     hasSaidUno: false,
@@ -755,11 +827,16 @@ export function App() {
   const myPlayer = gameState.players[0] || currentPlayer;
   const topCard = gameState.discardPile[gameState.discardPile.length - 1] || null;
 
+  // Check if player has any playable cards
+  const hasPlayableCard = myPlayer.hand.some((card) =>
+    isMyTurn && canPlayCard(card, topCard, gameState.currentColor, gameState.activeDrawStack, gameState.houseRules)
+  );
+
   return (
-    <div className="min-h-screen w-full flex flex-col bg-[#0b0f19] text-slate-100 overflow-x-hidden font-sans">
+    <div className="min-h-screen w-full flex flex-col bg-[#070a13] text-slate-100 overflow-x-hidden font-sans">
       {!inGame ? (
         <LobbyScreen
-          onStartVsBot={(count, diff, name) => startNewGame('vs-bot', count, diff, [name])}
+          onStartVsBot={(count, diff, name, avatar) => startNewGame('vs-bot', count, diff, [name], avatar)}
           onCreateOnlineRoom={handleCreateOnlineRoom}
           onJoinOnlineRoom={handleJoinOnlineRoom}
           onStartPassAndPlay={(count, names) => startNewGame('pass-and-play', count, 'medium', names)}
@@ -769,7 +846,7 @@ export function App() {
           lang={lang}
         />
       ) : (
-        <div className="flex-1 flex flex-col justify-between py-2 sm:py-3 relative min-h-screen">
+        <div className="flex-1 flex flex-col justify-between py-2 relative min-h-screen">
           {/* Header Bar */}
           <GameHeader
             mode={gameState.mode}
@@ -786,7 +863,10 @@ export function App() {
             lang={lang}
           />
 
-          {/* Opponents Ribbon at the top */}
+          {/* Dynamic Action Notification Banner */}
+          <ActionBanner notice={currentNotice} lang={lang} />
+
+          {/* Opponents Ribbon at the top (Arranged symmetrically) */}
           <div className="w-full max-w-4xl mx-auto px-4 flex items-center justify-around gap-2 my-1">
             {opponents.map((opp) => (
               <OpponentHand
@@ -795,12 +875,13 @@ export function App() {
                 isCurrentTurn={gameState.players[gameState.currentPlayerIndex]?.id === opp.id}
                 reaction={reactions[opp.id]}
                 position="top"
+                turnTimeLeft={gameState.turnTimeLeft}
                 lang={lang}
               />
             ))}
           </div>
 
-          {/* Central Game Board */}
+          {/* Central 3D Poker Felt Game Board */}
           <GameBoard
             topCard={topCard}
             previousCards={gameState.discardPile}
@@ -810,6 +891,7 @@ export function App() {
             direction={gameState.direction}
             theme={theme}
             isMyTurn={isMyTurn}
+            hasPlayableCard={hasPlayableCard}
             onDrawCard={() => handleDrawCard()}
             lang={lang}
           />
@@ -834,10 +916,16 @@ export function App() {
               />
             </div>
 
-            {/* Current Player Indicator */}
-            <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-300 shadow">
-              <span>{lang === 'uz' ? 'Navbat:' : 'Turn:'}</span>
-              <strong className="text-yellow-400">{currentPlayer.name}</strong>
+            {/* Current Player Indicator Pill */}
+            <div
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black shadow-xl border-2 transition-all ${
+                isMyTurn
+                  ? 'bg-yellow-400 text-slate-950 border-yellow-300 animate-pulse'
+                  : 'bg-slate-900/90 text-slate-300 border-slate-700'
+              }`}
+            >
+              <span>{isMyTurn ? (lang === 'uz' ? 'SIZNING NAVBATINGIZ!' : 'YOUR TURN!') : (lang === 'uz' ? 'Navbat:' : 'Turn:')}</span>
+              {!isMyTurn && <strong className="text-yellow-400 font-bold">{currentPlayer.name}</strong>}
             </div>
           </div>
 

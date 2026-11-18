@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { sound } from '../utils/sound';
 import { AvatarIcon } from './AvatarIcon';
-import { Wifi, Copy, Check, Play, X, Share2, Loader2 } from 'lucide-react';
+import { Wifi, Copy, Check, Play, X, Share2, Loader2, AlertCircle } from 'lucide-react';
 
 interface OnlineLobbyModalProps {
   isOpen: boolean;
@@ -34,6 +34,7 @@ export const OnlineLobbyModal: React.FC<OnlineLobbyModalProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
 
   if (!isOpen) return null;
 
@@ -44,9 +45,25 @@ export const OnlineLobbyModal: React.FC<OnlineLobbyModalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleShareLink = () => {
+  const shareUrl = `${window.location.origin}${window.location.pathname}?room=${roomCode}`;
+
+  const handleShare = async () => {
     sound.playClick();
-    const shareUrl = `${window.location.origin}?room=${roomCode}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "UNO O'yini",
+          text: `Men bilan UNO o'yna! Xona kodi: ${roomCode}`,
+          url: shareUrl,
+        });
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 2000);
+        return;
+      } catch {
+        // Fallback to clipboard
+      }
+    }
+    // Clipboard fallback
     navigator.clipboard.writeText(shareUrl);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
@@ -54,7 +71,7 @@ export const OnlineLobbyModal: React.FC<OnlineLobbyModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-xl animate-fadeIn select-none">
-      <div className="relative w-full max-w-md bg-slate-900 border-2 border-emerald-500/60 rounded-3xl p-6 sm:p-7 shadow-2xl text-center overflow-hidden">
+      <div className="relative w-full max-w-md bg-gradient-to-b from-slate-900 via-[#0c1220] to-slate-950 border-2 border-emerald-500/60 rounded-3xl p-5 sm:p-7 shadow-2xl text-center overflow-hidden">
         {/* Glow halo */}
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
 
@@ -68,8 +85,8 @@ export const OnlineLobbyModal: React.FC<OnlineLobbyModalProps> = ({
         </button>
 
         <div className="relative z-10">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-950 border-2 border-emerald-500 text-emerald-400 mb-3 shadow-lg">
-            <Wifi size={30} className={isConnecting ? 'animate-pulse' : ''} />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-950 border-2 border-emerald-500 text-emerald-400 mb-3 shadow-lg shadow-emerald-950/60">
+            <Wifi size={28} className={isConnecting ? 'animate-pulse' : ''} />
           </div>
 
           <h2 className="text-xl sm:text-2xl font-black text-white mb-1">
@@ -84,44 +101,50 @@ export const OnlineLobbyModal: React.FC<OnlineLobbyModalProps> = ({
           <p className="text-xs sm:text-sm text-slate-300 mb-5">
             {isHost
               ? lang === 'uz'
-                ? 'Ushbu kodni do\'stingizga yuboring va ulanishini kuting:'
-                : 'Share this code with your friend to connect:'
+                ? "Ushbu xona kodini do'stingizga yuboring yoki havolani ulashing:"
+                : 'Share this room code or link with your friend to connect:'
               : lang === 'uz'
-              ? 'Host o\'yinni boshlashini kuting...'
+              ? "Host o'yinni boshlashini kuting..."
               : 'Waiting for the host to launch the game...'}
           </p>
 
           {/* Room Code Display Box */}
-          <div className="bg-slate-950/90 border-2 border-emerald-500/80 rounded-2xl p-3.5 mb-5 shadow-inner">
+          <div className="bg-slate-950/90 border-2 border-emerald-500/80 rounded-2xl p-4 mb-5 shadow-inner">
             <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
               {lang === 'uz' ? 'XONA KODI' : 'ROOM CODE'}
             </span>
-            <span className="font-mono font-black text-2xl sm:text-3xl text-emerald-400 tracking-widest">
+            <span className="font-mono font-black text-3xl sm:text-4xl text-emerald-400 tracking-widest drop-shadow-md">
               {roomCode}
             </span>
 
-            {/* Copy & Share Buttons */}
-            <div className="flex items-center justify-center gap-2 mt-3 pt-3 border-t border-slate-800">
+            {/* Quick Share & Copy Buttons */}
+            <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-800">
               <button
                 onClick={handleCopyCode}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition active:scale-95 cursor-pointer shadow"
+                className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition active:scale-95 cursor-pointer shadow border border-slate-700"
               >
                 {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                <span>{copied ? (lang === 'uz' ? 'Nusxalandi!' : 'Copied!') : (lang === 'uz' ? 'Kodni Nusxalash' : 'Copy Code')}</span>
+                <span>{copied ? (lang === 'uz' ? 'Nusxalandi!' : 'Copied!') : (lang === 'uz' ? 'Kodni Nusxa' : 'Copy Code')}</span>
               </button>
 
               <button
-                onClick={handleShareLink}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition active:scale-95 cursor-pointer shadow"
+                onClick={handleShare}
+                className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs transition active:scale-95 cursor-pointer shadow"
               >
-                {copiedLink ? <Check size={14} className="text-emerald-400" /> : <Share2 size={14} />}
-                <span>{copiedLink ? (lang === 'uz' ? 'Havola Nusxalandi!' : 'Link Copied!') : (lang === 'uz' ? 'Havola' : 'Share Link')}</span>
+                {shareSuccess || copiedLink ? <Check size={14} className="text-yellow-300" /> : <Share2 size={14} />}
+                <span>
+                  {shareSuccess
+                    ? lang === 'uz' ? 'Yuborildi!' : 'Shared!'
+                    : copiedLink
+                    ? lang === 'uz' ? 'Havola Nusxalandi!' : 'Link Copied!'
+                    : lang === 'uz' ? "Do'stlarga Ulashish" : 'Share Invite'}
+                </span>
               </button>
             </div>
           </div>
 
           {/* Players in Room */}
-          <div className="space-y-2.5 mb-6">
+          <div className="space-y-2.5 mb-5">
             {/* Host Box */}
             <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-800/80 border border-slate-700">
               <div className="flex items-center gap-3">
@@ -129,11 +152,11 @@ export const OnlineLobbyModal: React.FC<OnlineLobbyModalProps> = ({
                 <div className="text-left">
                   <div className="text-sm font-black text-white">{hostName}</div>
                   <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
-                    {lang === 'uz' ? 'Xona Egasi (Host)' : 'Host'}
+                    {lang === 'uz' ? 'Xona Egasi (Host)' : 'Room Host'}
                   </div>
                 </div>
               </div>
-              <span className="px-2 py-0.5 rounded-md bg-emerald-950 text-emerald-300 font-bold text-[10px] border border-emerald-600/60">
+              <span className="px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-300 font-bold text-[10px] border border-emerald-600/60">
                 {lang === 'uz' ? 'Tayyor' : 'Ready'}
               </span>
             </div>
@@ -147,16 +170,16 @@ export const OnlineLobbyModal: React.FC<OnlineLobbyModalProps> = ({
                     <div className="text-left">
                       <div className="text-sm font-black text-white">{guestName}</div>
                       <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
-                        {lang === 'uz' ? '2-O\'yinchi' : 'Player 2'}
+                        {lang === 'uz' ? "2-O'yinchi" : 'Player 2'}
                       </div>
                     </div>
                   </div>
-                  <span className="px-2 py-0.5 rounded-md bg-cyan-950 text-cyan-300 font-bold text-[10px] border border-cyan-600/60">
-                    {lang === 'uz' ? 'Ulandi ✅' : 'Connected'}
+                  <span className="px-2.5 py-1 rounded-full bg-cyan-950 text-cyan-300 font-bold text-[10px] border border-cyan-600/60 animate-pulse">
+                    {lang === 'uz' ? 'Ulandi ✅' : 'Connected ✅'}
                   </span>
                 </>
               ) : (
-                <div className="w-full flex items-center justify-center gap-2 py-1 text-slate-400 text-xs font-semibold">
+                <div className="w-full flex items-center justify-center gap-2 py-1.5 text-slate-300 text-xs font-semibold">
                   <Loader2 size={16} className="animate-spin text-yellow-400" />
                   <span>
                     {isConnecting
@@ -164,7 +187,7 @@ export const OnlineLobbyModal: React.FC<OnlineLobbyModalProps> = ({
                         ? 'Xona serveriga ulanmoqda...'
                         : 'Connecting to room...'
                       : lang === 'uz'
-                      ? 'Do\'st ulanishi kutilmoqda...'
+                      ? "Do'st ulanishi kutilmoqda..."
                       : 'Waiting for friend to join...'}
                   </span>
                 </div>
@@ -174,8 +197,9 @@ export const OnlineLobbyModal: React.FC<OnlineLobbyModalProps> = ({
 
           {/* Error Message if any */}
           {errorMessage && (
-            <div className="p-3 rounded-xl bg-red-950/80 border border-red-500 text-red-200 text-xs font-bold mb-4">
-              {errorMessage}
+            <div className="p-3 rounded-2xl bg-red-950/90 border border-red-500 text-red-200 text-xs font-bold mb-4 flex items-center gap-2 text-left">
+              <AlertCircle size={16} className="text-red-400 shrink-0" />
+              <span>{errorMessage}</span>
             </div>
           )}
 
@@ -190,7 +214,7 @@ export const OnlineLobbyModal: React.FC<OnlineLobbyModalProps> = ({
                 }}
                 className={`w-full py-3.5 rounded-2xl font-black text-base flex items-center justify-center gap-2 shadow-xl transition active:scale-98 ${
                   guestName
-                    ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white cursor-pointer shadow-emerald-950/80'
+                    ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white cursor-pointer shadow-emerald-950/80 animate-pulse'
                     : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                 }`}
               >
@@ -198,10 +222,10 @@ export const OnlineLobbyModal: React.FC<OnlineLobbyModalProps> = ({
                 <span>
                   {guestName
                     ? lang === 'uz'
-                      ? 'O\'YINNI BOSHLASH'
+                      ? "O'YINNI BOSHLASH"
                       : 'START GAME'
                     : lang === 'uz'
-                    ? '2-O\'YINCHI KUTILMOQDA...'
+                    ? "2-O'YINCHI KUTILMOQDA..."
                     : 'WAITING FOR PLAYER 2...'}
                 </span>
               </button>
@@ -211,7 +235,7 @@ export const OnlineLobbyModal: React.FC<OnlineLobbyModalProps> = ({
               onClick={onCancel}
               className="w-full py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 font-bold text-xs border border-slate-700 transition cursor-pointer"
             >
-              {lang === 'uz' ? 'Bekor Qilish' : 'Cancel'}
+              {lang === 'uz' ? 'Orqaga Qaytish' : 'Cancel'}
             </button>
           </div>
         </div>

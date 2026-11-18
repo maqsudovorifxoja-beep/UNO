@@ -39,14 +39,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const scrollLeft = () => {
     sound.playClick();
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({ left: -160, behavior: 'smooth' });
+      scrollContainerRef.current.scrollBy({ left: -150, behavior: 'smooth' });
     }
   };
 
   const scrollRight = () => {
     sound.playClick();
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({ left: 160, behavior: 'smooth' });
+      scrollContainerRef.current.scrollBy({ left: 150, behavior: 'smooth' });
     }
   };
 
@@ -54,96 +54,110 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     isMyTurn && canPlayCard(card, topCard, currentColor, activeDrawStack, houseRules)
   ).length;
 
-  // Jump-In exact matches when it's NOT our turn
   const jumpInCard = !isMyTurn && houseRules.jumpIn && topCard
     ? cards.find((c) => isExactMatch(c, topCard))
     : null;
 
+  // Dynamic overlap calculation so cards fan out elegantly without clipping
+  const total = cards.length;
+  const getOverlapMargin = (idx: number): string => {
+    if (idx === 0) return '0px';
+    if (total > 14) return '-34px';
+    if (total > 10) return '-28px';
+    if (total > 7) return '-22px';
+    if (total > 4) return '-14px';
+    return '-6px';
+  };
+
   return (
-    <div className="relative w-full max-w-5xl mx-auto flex flex-col items-center select-none px-2 sm:px-4">
-      {/* Human reaction bubble */}
+    <div className="relative w-full max-w-4xl mx-auto flex flex-col items-center select-none px-2 z-30 pb-1">
+      {/* Human reaction speech bubble */}
       {reaction && (
-        <div className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white text-slate-900 font-bold text-xs px-3 py-1 rounded-xl shadow-xl border border-slate-300 z-30 animate-bounce">
+        <div className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white text-slate-900 font-black text-xs px-3.5 py-1.5 rounded-2xl shadow-2xl border-2 border-slate-300 z-50 animate-bounce">
           {reaction}
-          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45 border-r border-b border-slate-300" />
+          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 border-r-2 border-b-2 border-slate-300" />
         </div>
       )}
 
-      {/* Hand Toolbar / Organization Buttons */}
-      <div className="w-full flex items-center justify-between mb-1.5 px-2 text-xs sm:text-sm">
-        <div className="flex items-center gap-1.5 text-slate-300 font-medium">
-          <span className="font-bold text-white bg-slate-800/90 border border-slate-700 px-2.5 py-1 rounded-full text-xs font-mono shadow">
-            {cards.length} {lang === 'uz' ? 'karta' : 'cards'}
+      {/* Hand Status & Sort Action Bar */}
+      <div className="w-full flex items-center justify-between mb-1 px-2 text-xs">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Card counter badge */}
+          <span className="font-mono font-black text-white bg-slate-900/90 border border-slate-700 px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs shadow">
+            {cards.length} {lang === 'uz' ? 'ta karta' : 'cards'}
           </span>
+
+          {/* Turn Guidance message */}
           {isMyTurn && (
             <span
-              className={`text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1 shadow ${
+              className={`text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full font-black flex items-center gap-1 shadow-md transition-all ${
                 playableCount > 0
-                  ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-600/50'
-                  : 'bg-amber-950/80 text-amber-300 border border-amber-600/50'
+                  ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/80 animate-pulse'
+                  : 'bg-amber-950 text-amber-300 border border-yellow-500/80'
               }`}
             >
-              <Sparkles size={13} />
+              <Sparkles size={12} />
               {playableCount > 0
                 ? lang === 'uz'
-                  ? `${playableCount} ta yurish mumkin`
+                  ? `${playableCount} ta karta yurish mumkin`
                   : `${playableCount} playable`
                 : lang === 'uz'
-                ? 'Karta oling (Kolodadan)'
-                : 'Draw a card'}
+                ? "Mos karta yo'q — Kolodadan oling"
+                : 'No match — Draw card'}
             </span>
           )}
 
-          {/* Jump In Alert button */}
+          {/* Jump In alert button */}
           {jumpInCard && onJumpIn && (
             <button
               onClick={() => {
                 sound.playWild();
                 onJumpIn(jumpInCard);
               }}
-              className="flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-xs shadow-lg animate-bounce cursor-pointer active:scale-95"
+              className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black text-[10px] sm:text-xs shadow-lg animate-bounce cursor-pointer active:scale-95"
             >
-              <Zap size={14} fill="currentColor" />
-              <span>{lang === 'uz' ? 'JUMP IN! (Navbatsiz tashlash)' : 'JUMP IN!'}</span>
+              <Zap size={12} fill="currentColor" />
+              <span>JUMP IN!</span>
             </button>
           )}
         </div>
 
-        {/* Sort Buttons */}
+        {/* Sorting controls */}
         <div className="flex items-center gap-1">
           <button
             onClick={() => {
               sound.playClick();
               onSortByColor();
             }}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[11px] sm:text-xs transition active:scale-95 cursor-pointer shadow"
+            className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] sm:text-xs font-bold border border-slate-700 transition active:scale-95 cursor-pointer shadow"
             title={lang === 'uz' ? "Rang bo'yicha saralash" : 'Sort by Color'}
           >
-            <ArrowDownUp size={12} />
+            <ArrowDownUp size={11} className="text-yellow-400" />
             <span>{lang === 'uz' ? 'Rang' : 'Color'}</span>
           </button>
+
           <button
             onClick={() => {
               sound.playClick();
               onSortByValue();
             }}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[11px] sm:text-xs transition active:scale-95 cursor-pointer shadow"
+            className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] sm:text-xs font-bold border border-slate-700 transition active:scale-95 cursor-pointer shadow"
             title={lang === 'uz' ? "Raqam bo'yicha saralash" : 'Sort by Value'}
           >
-            <ArrowDownUp size={12} />
+            <ArrowDownUp size={11} className="text-cyan-400" />
             <span>{lang === 'uz' ? 'Raqam' : 'Value'}</span>
           </button>
         </div>
       </div>
 
-      {/* Hand Cards Container with Mobile Touch Horizontal Scroll */}
+      {/* Hand Cards Fanned Row */}
       <div className="relative w-full flex items-center justify-center">
-        {/* Scroll Left Button for desktop/large hands */}
-        {cards.length > 7 && (
+        {/* Scroll Left Button if hand is large */}
+        {cards.length > 8 && (
           <button
             onClick={scrollLeft}
-            aria-label="Scroll left"
-            className="hidden sm:flex absolute -left-3 z-30 w-8 h-8 rounded-full bg-slate-900/90 border border-slate-700 text-slate-300 hover:text-white items-center justify-center shadow-lg cursor-pointer hover:bg-slate-800"
+            aria-label="Chapga surish"
+            className="hidden sm:flex absolute -left-2 z-40 w-8 h-8 rounded-full bg-slate-900/95 border border-slate-700 text-slate-200 hover:text-white items-center justify-center shadow-xl cursor-pointer hover:bg-slate-800 active:scale-95"
           >
             <ChevronLeft size={18} />
           </button>
@@ -151,20 +165,27 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
         <div
           ref={scrollContainerRef}
-          className="cards-scroll-container w-full overflow-x-auto overflow-y-visible py-4 sm:py-6 px-4 flex items-center justify-start sm:justify-center gap-1 sm:gap-2 no-scrollbar"
+          className="w-full overflow-x-auto pt-4 pb-2 px-2 flex items-center justify-start sm:justify-center no-scrollbar min-h-[125px] sm:min-h-[155px]"
         >
           {cards.map((card, idx) => {
             const playable = isMyTurn && canPlayCard(card, topCard, currentColor, activeDrawStack, houseRules);
             const isJumpIn = Boolean(!isMyTurn && houseRules.jumpIn && topCard && isExactMatch(card, topCard));
 
+            // Dynamic Fanning angle
+            const mid = (total - 1) / 2;
+            const offset = total > 1 ? (idx - mid) / mid : 0;
+            const fanAngle = total <= 9 ? offset * 7 : offset * 4;
+            const fanY = total <= 9 ? Math.abs(offset) * 5 : 0;
+
             return (
               <div
                 key={card.id || idx}
-                className="transition-transform duration-200"
                 style={{
-                  // Overlap cards slightly on smaller screens or when holding many cards
-                  marginLeft: idx === 0 ? 0 : cards.length > 9 ? '-18px' : cards.length > 6 ? '-10px' : '0px',
+                  marginLeft: getOverlapMargin(idx),
+                  transform: `rotate(${fanAngle}deg) translateY(${fanY}px)`,
+                  zIndex: idx + 10,
                 }}
+                className="card-fan-item shrink-0 transition-transform duration-200"
               >
                 <UnoCard
                   card={card}
@@ -184,12 +205,12 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           })}
         </div>
 
-        {/* Scroll Right Button */}
-        {cards.length > 7 && (
+        {/* Scroll Right Button if hand is large */}
+        {cards.length > 8 && (
           <button
             onClick={scrollRight}
-            aria-label="Scroll right"
-            className="hidden sm:flex absolute -right-3 z-30 w-8 h-8 rounded-full bg-slate-900/90 border border-slate-700 text-slate-300 hover:text-white items-center justify-center shadow-lg cursor-pointer hover:bg-slate-800"
+            aria-label="O'ngga surish"
+            className="hidden sm:flex absolute -right-2 z-40 w-8 h-8 rounded-full bg-slate-900/95 border border-slate-700 text-slate-200 hover:text-white items-center justify-center shadow-xl cursor-pointer hover:bg-slate-800 active:scale-95"
           >
             <ChevronRight size={18} />
           </button>

@@ -31,75 +31,70 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
     >
       {/* Speech / Reaction Bubble */}
       {reaction && (
-        <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white text-slate-900 font-black text-xs px-3 py-1.5 rounded-2xl shadow-2xl border-2 border-slate-300 z-30 animate-bounce">
+        <div className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white text-slate-900 font-black text-xs px-3 py-1 rounded-2xl shadow-2xl border border-slate-300 z-30 animate-bounce">
           {reaction}
-          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 border-r-2 border-b-2 border-slate-300" />
+          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-white rotate-45 border-r border-b border-slate-300" />
         </div>
       )}
 
-      {/* Turn Spotlight Aura */}
-      {isCurrentTurn && (
-        <div className="absolute -inset-3 rounded-full bg-gradient-to-r from-yellow-400/30 to-amber-500/30 blur-xl animate-pulse pointer-events-none" />
-      )}
-
-      {/* Player Badge Capsule */}
+      {/* Player Capsule */}
       <div
-        className={`relative flex items-center gap-2.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl border-2 shadow-xl backdrop-blur-md transition-all ${
+        className={`relative flex items-center gap-2 px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-2xl border shadow-lg backdrop-blur-md transition-all ${
           isCurrentTurn
             ? 'bg-slate-900/95 border-yellow-400 ring-2 ring-yellow-400/50 shadow-yellow-500/20'
-            : 'bg-slate-900/85 border-slate-700/80'
+            : 'bg-slate-900/80 border-slate-800'
         }`}
       >
-        {/* Avatar with Turn Countdown border */}
+        {/* Avatar with Turn Countdown badge */}
         <div className="relative">
-          <AvatarIcon avatarId={player.avatar || (player.isBot ? 'bot' : 'ninja')} size={18} />
+          <AvatarIcon avatarId={player.avatar || (player.isBot ? 'bot' : 'ninja')} size={15} />
 
-          {/* Turn timer badge when it's their turn */}
+          {/* Turn timer badge */}
           {isCurrentTurn && (
-            <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-slate-950 rounded-full w-4 h-4 flex items-center justify-center font-mono font-black text-[9px] shadow">
+            <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-slate-950 rounded-full w-3.5 h-3.5 flex items-center justify-center font-mono font-black text-[8px] shadow">
               {turnTimeLeft}
             </div>
           )}
         </div>
 
         <div className="flex flex-col text-left">
-          <div className="flex items-center gap-1.5 leading-tight">
-            <span className="font-black text-xs sm:text-sm truncate max-w-[85px] sm:max-w-[120px] text-white">
+          <div className="flex items-center gap-1 leading-tight">
+            <span className="font-black text-xs truncate max-w-[70px] sm:max-w-[100px] text-white">
               {player.name}
             </span>
             {isCurrentTurn && (
-              <span className="flex items-center text-[10px] text-yellow-400 animate-pulse font-mono font-bold">
-                <Clock size={10} className="mr-0.5" />
-                {lang === 'uz' ? 'Yurmoqda' : 'Playing'}
+              <span className="flex items-center text-[9px] text-yellow-400 font-mono font-bold">
+                <Clock size={9} className="mr-0.5" />
+                {lang === 'uz' ? 'Navbat' : 'Turn'}
               </span>
             )}
           </div>
-          <span className="text-[11px] text-slate-300 font-mono font-bold">
+          <span className="text-[10px] text-slate-300 font-mono font-bold">
             {cardCount} {lang === 'uz' ? 'ta karta' : 'cards'}
           </span>
         </div>
 
         {/* Pulsing UNO Badge if player holds exactly 1 card */}
         {cardCount === 1 && (
-          <div className="ml-1 px-2 py-0.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 text-yellow-300 font-black italic text-[11px] flex items-center gap-1 animate-bounce shadow-lg border border-yellow-300">
-            <Flame size={13} fill="currentColor" />
+          <div className="ml-1 px-1.5 py-0.5 rounded-md bg-gradient-to-r from-red-600 to-rose-600 text-yellow-300 font-black italic text-[10px] flex items-center gap-0.5 animate-bounce shadow border border-yellow-300">
+            <Flame size={11} fill="currentColor" />
             <span>UNO!</span>
           </div>
         )}
       </div>
 
-      {/* Mini Fanned Face-down Cards */}
-      <div className="mt-1 flex items-center justify-center relative h-10 sm:h-12 w-24 sm:w-28">
-        {Array.from({ length: Math.min(cardCount, 5) }).map((_, idx) => {
-          const maxDisplay = Math.min(cardCount, 5);
-          const offset = (idx - maxDisplay / 2 + 0.5) * 8;
+      {/* Mini Fanned Cards Preview */}
+      <div className="mt-0.5 flex items-center justify-center relative h-6 sm:h-8 w-16 sm:w-20 pointer-events-none">
+        {Array.from({ length: Math.min(cardCount, 4) }).map((_, idx) => {
+          const count = Math.min(cardCount, 4);
+          const offset = (idx - count / 2 + 0.5) * 6;
           return (
             <div
               key={idx}
               style={{
-                transform: `translateX(${offset}px) rotate(${offset * 1.8}deg)`,
+                transform: `translateX(${offset}px) rotate(${offset * 1.5}deg)`,
               }}
-              className="absolute transition-transform pointer-events-none"
+              className="absolute"
             >
               <UnoCard
                 card={{ id: `back-${idx}`, color: 'red', value: '0', scoreValue: 0 }}

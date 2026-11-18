@@ -822,6 +822,19 @@ export function App() {
     });
   };
 
+  // Keep refs up-to-date to prevent stale closures in P2P event listeners
+  const executePlayCardRef = useRef(executePlayCard);
+  executePlayCardRef.current = executePlayCard;
+
+  const handleDrawCardRef = useRef(handleDrawCard);
+  handleDrawCardRef.current = handleDrawCard;
+
+  const handleSayUnoRef = useRef(handleSayUno);
+  handleSayUnoRef.current = handleSayUno;
+
+  const handleChallengeUnoRef = useRef(handleChallengeUno);
+  handleChallengeUnoRef.current = handleChallengeUno;
+
   // ONLINE MULTIPLAYER: HOST CREATES ROOM
   const handleCreateOnlineRoom = (roomCode: string, hostPlayerName: string, avatarId: string) => {
     setOnlineIsHost(true);
@@ -845,13 +858,13 @@ export function App() {
       },
       onMessageReceived: (msg: NetworkMessage) => {
         if (msg.type === 'PLAY_CARD') {
-          executePlayCard(msg.payload.card, msg.payload.chosenColor, msg.payload.targetPlayerId);
+          executePlayCardRef.current(msg.payload.card, msg.payload.chosenColor, msg.payload.targetPlayerId);
         } else if (msg.type === 'DRAW_CARD') {
-          handleDrawCard();
+          handleDrawCardRef.current();
         } else if (msg.type === 'CALL_UNO') {
-          handleSayUno();
+          handleSayUnoRef.current();
         } else if (msg.type === 'CHALLENGE_UNO') {
-          handleChallengeUno();
+          handleChallengeUnoRef.current();
         }
       },
       onError: (errMsg) => {
@@ -973,20 +986,22 @@ export function App() {
   );
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-[#070a13] text-slate-100 overflow-x-hidden font-sans">
+    <div className="h-screen w-full max-h-screen overflow-hidden flex flex-col bg-[#070a13] text-slate-100 font-sans select-none">
       {!inGame ? (
-        <LobbyScreen
-          onStartVsBot={(count, diff, name, avatar) => startNewGame('vs-bot', count, diff, [name], avatar)}
-          onCreateOnlineRoom={handleCreateOnlineRoom}
-          onJoinOnlineRoom={handleJoinOnlineRoom}
-          onStartPassAndPlay={(count, names) => startNewGame('pass-and-play', count, 'medium', names)}
-          onOpenRules={() => setIsRulesOpen(true)}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-          stats={stats}
-          lang={lang}
-        />
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <LobbyScreen
+            onStartVsBot={(count, diff, name, avatar) => startNewGame('vs-bot', count, diff, [name], avatar)}
+            onCreateOnlineRoom={handleCreateOnlineRoom}
+            onJoinOnlineRoom={handleJoinOnlineRoom}
+            onStartPassAndPlay={(count, names) => startNewGame('pass-and-play', count, 'medium', names)}
+            onOpenRules={() => setIsRulesOpen(true)}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+            stats={stats}
+            lang={lang}
+          />
+        </div>
       ) : (
-        <div className="flex-1 flex flex-col justify-between py-2 relative min-h-screen">
+        <div className="flex-1 flex flex-col justify-between py-1 px-1 sm:px-2 relative overflow-hidden">
           {/* Header Bar */}
           <GameHeader
             mode={gameState.mode}

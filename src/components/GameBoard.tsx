@@ -18,39 +18,52 @@ interface GameBoardProps {
   lang?: 'uz' | 'en';
 }
 
-const THEME_STYLES: Record<TableTheme, { felt: string; border: string; glow: string; rail: string }> = {
+const THEME_STYLES: Record<
+  TableTheme,
+  {
+    felt: string;
+    border: string;
+    glow: string;
+    rail: string;
+    accent: string;
+  }
+> = {
   'classic-casino': {
-    felt: 'from-[#0a4630] via-[#053121] to-[#021f14]',
-    border: 'border-[#1b7a54]',
+    felt: 'from-[#0b4d35] via-[#053322] to-[#021c12]',
+    border: 'border-[#1b8057]',
     glow: 'rgba(16, 185, 129, 0.25)',
-    rail: 'border-[#2d5c48]',
+    rail: 'border-[#031e13] bg-[#02160e]',
+    accent: 'text-emerald-400',
   },
   'neon-arcade': {
-    felt: 'from-[#1e1338] via-[#120a24] to-[#080410]',
-    border: 'border-[#8b5cf6]',
-    glow: 'rgba(139, 92, 246, 0.3)',
-    rail: 'border-[#582b9b]',
+    felt: 'from-[#22133f] via-[#120926] to-[#080312]',
+    border: 'border-[#9333ea]',
+    glow: 'rgba(147, 51, 234, 0.3)',
+    rail: 'border-[#120626] bg-[#090214]',
+    accent: 'text-purple-400',
   },
   'midnight-luxury': {
-    felt: 'from-[#171c26] via-[#0d1117] to-[#05070a]',
+    felt: 'from-[#19202c] via-[#0e131b] to-[#05070a]',
     border: 'border-[#d4af37]',
     glow: 'rgba(212, 175, 55, 0.25)',
-    rail: 'border-[#8c7322]',
+    rail: 'border-[#261f07] bg-[#120e03]',
+    accent: 'text-amber-400',
   },
   'crimson-velvet': {
-    felt: 'from-[#4a0d16] via-[#2f060c] to-[#1a0206]',
-    border: 'border-[#e11d48]',
-    glow: 'rgba(225, 29, 72, 0.28)',
-    rail: 'border-[#881337]',
+    felt: 'from-[#540d19] via-[#33050d] to-[#1c0206]',
+    border: 'border-[#f43f5e]',
+    glow: 'rgba(244, 63, 94, 0.3)',
+    rail: 'border-[#2b0309] bg-[#170104]',
+    accent: 'text-rose-400',
   },
 };
 
-const COLOR_CONFIG: Record<CardColor, { bg: string; textUz: string; textEn: string; glow: string }> = {
-  red: { bg: 'bg-[#ff2d3d]', textUz: 'Qizil', textEn: 'Red', glow: 'shadow-red-500/80 ring-red-400' },
-  blue: { bg: 'bg-[#0094ff]', textUz: "Ko'k", textEn: 'Blue', glow: 'shadow-blue-500/80 ring-blue-400' },
-  green: { bg: 'bg-[#1ddc62]', textUz: 'Yashil', textEn: 'Green', glow: 'shadow-emerald-500/80 ring-emerald-400' },
-  yellow: { bg: 'bg-[#ffd000]', textUz: 'Sariq', textEn: 'Yellow', glow: 'shadow-amber-400/80 ring-yellow-300' },
-  wild: { bg: 'bg-purple-500', textUz: 'Tanlang', textEn: 'Choose', glow: 'shadow-purple-500/80 ring-purple-400' },
+const COLOR_CONFIG: Record<CardColor, { bg: string; textUz: string; textEn: string; ringColor: string; shadow: string }> = {
+  red: { bg: 'bg-[#ff2438]', textUz: 'Qizil', textEn: 'Red', ringColor: 'ring-red-500', shadow: 'shadow-red-500/60' },
+  blue: { bg: 'bg-[#009dff]', textUz: "Ko'k", textEn: 'Blue', ringColor: 'ring-blue-500', shadow: 'shadow-blue-500/60' },
+  green: { bg: 'bg-[#1ee869]', textUz: 'Yashil', textEn: 'Green', ringColor: 'ring-emerald-500', shadow: 'shadow-emerald-500/60' },
+  yellow: { bg: 'bg-[#ffd200]', textUz: 'Sariq', textEn: 'Yellow', ringColor: 'ring-yellow-400', shadow: 'shadow-yellow-400/60' },
+  wild: { bg: 'bg-purple-500', textUz: 'Tanlang', textEn: 'Choose', ringColor: 'ring-purple-400', shadow: 'shadow-purple-500/60' },
 };
 
 export const GameBoard: React.FC<GameBoardProps> = ({
@@ -70,38 +83,70 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const colorInfo = COLOR_CONFIG[currentColor] || COLOR_CONFIG.red;
 
   return (
-    <div className="relative w-full max-w-4xl mx-auto flex flex-col items-center justify-center p-2 sm:p-4 my-auto select-none">
-      {/* 3D Oval Felt Table Surface */}
+    <div className="relative w-full max-w-4xl mx-auto flex flex-col items-center justify-center px-2 py-1 select-none">
+      {/* 3D Casino Table Felt Surface */}
       <div
         style={{
-          boxShadow: `0 0 90px ${currentTheme.glow}, inset 0 0 60px rgba(0,0,0,0.85)`,
+          boxShadow: `0 0 70px ${currentTheme.glow}, inset 0 0 50px rgba(0,0,0,0.85)`,
         }}
-        className={`relative w-full min-h-[230px] sm:min-h-[290px] md:min-h-[330px] rounded-[48px] sm:rounded-[64px] bg-gradient-to-b ${currentTheme.felt} border-4 ${currentTheme.border} p-4 sm:p-8 flex flex-col items-center justify-center overflow-hidden transition-all duration-500`}
+        className={`relative w-full h-[190px] sm:h-[230px] md:h-[260px] rounded-[32px] sm:rounded-[44px] bg-gradient-to-b ${currentTheme.felt} border-2 ${currentTheme.border} p-3 sm:p-5 flex items-center justify-center overflow-hidden transition-all duration-300 shadow-2xl`}
       >
-        {/* Table Felt Cross-weave Texture */}
-        <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+        {/* Felt Texture subtle background */}
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:12px_12px] pointer-events-none" />
 
-        {/* Orbiting Direction Indicator Ring with Active Color Glow */}
+        {/* Orbiting Turn Direction Ring */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div
-            className={`w-56 h-56 sm:w-76 sm:h-76 md:w-88 md:h-88 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center transition-all ${
+            className={`w-44 h-44 sm:w-60 sm:h-60 md:w-72 md:h-72 rounded-full border border-dashed border-white/20 flex items-center justify-center transition-all duration-700 ${
               direction === 1 ? 'rotate-cw' : 'rotate-ccw'
             }`}
           >
-            <div className="w-full flex justify-between px-3 text-white/40">
-              {direction === 1 ? <RotateCw size={24} /> : <RotateCcw size={24} />}
-              {direction === 1 ? <RotateCw size={24} /> : <RotateCcw size={24} />}
+            <div className="w-full flex justify-between px-2 text-white/25">
+              {direction === 1 ? <RotateCw size={18} /> : <RotateCcw size={18} />}
+              {direction === 1 ? <RotateCw size={18} /> : <RotateCcw size={18} />}
             </div>
           </div>
         </div>
 
-        {/* Central Card Interaction Area */}
-        <div className="relative z-10 flex items-center justify-center gap-5 sm:gap-10 md:gap-14">
-          {/* DRAW PILE (DECK) */}
+        {/* Top Indicators Bar (Inside Table) */}
+        <div className="absolute top-2.5 sm:top-3 inset-x-4 flex items-center justify-between z-20 pointer-events-none">
+          {/* Active Color Pill */}
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-950/90 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1 rounded-full shadow-lg pointer-events-auto">
+            <span className="text-[10px] sm:text-xs text-slate-300 font-bold uppercase tracking-wider">
+              {lang === 'uz' ? 'Rang:' : 'Color:'}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`w-3.5 h-3.5 rounded-full shadow-md ring-2 ring-white animate-pulse ${colorInfo.bg}`}
+              />
+              <span className="text-[11px] sm:text-xs font-black capitalize text-white">
+                {lang === 'uz' ? colorInfo.textUz : colorInfo.textEn}
+              </span>
+            </div>
+          </div>
+
+          {/* Direction Pill */}
+          <div className="flex items-center gap-1 bg-slate-950/90 border border-slate-700 px-2.5 py-1 rounded-full text-slate-300 text-[10px] sm:text-xs shadow-lg pointer-events-auto">
+            {direction === 1 ? (
+              <RotateCw size={12} className="text-cyan-400" />
+            ) : (
+              <RotateCcw size={12} className="text-cyan-400" />
+            )}
+            <span className="font-mono font-bold hidden sm:inline">
+              {direction === 1
+                ? lang === 'uz' ? "Soat bo'yicha" : 'Clockwise'
+                : lang === 'uz' ? "Teskari" : 'Counter-CW'}
+            </span>
+          </div>
+        </div>
+
+        {/* Central Playing Arena: Draw Pile + Discard Pile */}
+        <div className="relative z-10 flex items-center justify-center gap-8 sm:gap-14 md:gap-18 mt-3 sm:mt-4">
+          {/* 1. DRAW PILE (DECK) */}
           <div className="relative flex flex-col items-center">
-            {/* 3D Stack depth under deck */}
-            <div className="absolute top-2 left-1.5 w-20 h-29 sm:w-24 sm:h-35 md:w-26 md:h-38 bg-black rounded-2xl border border-zinc-800 -rotate-3" />
-            <div className="absolute top-1 left-0.5 w-20 h-29 sm:w-24 sm:h-35 md:w-26 md:h-38 bg-zinc-950 rounded-2xl border border-zinc-700 -rotate-1" />
+            {/* 3D stacked deck shadow cards */}
+            <div className="absolute top-1.5 left-1 w-18 h-26 sm:w-22 sm:h-32 bg-black/80 rounded-2xl border border-zinc-800 -rotate-3 pointer-events-none" />
+            <div className="absolute top-0.5 left-0.5 w-18 h-26 sm:w-22 sm:h-32 bg-zinc-950 rounded-2xl border border-zinc-700 -rotate-1 pointer-events-none" />
 
             <div
               onClick={() => {
@@ -110,9 +155,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                   onDrawCard();
                 }
               }}
-              className={`relative transition-all duration-200 ${
+              className={`relative transition-all duration-200 select-none ${
                 isMyTurn
-                  ? 'cursor-pointer hover:scale-105 active:scale-95 group ring-2 ring-yellow-400/80 rounded-2xl'
+                  ? 'cursor-pointer hover:scale-105 active:scale-95 ring-3 ring-yellow-400 rounded-2xl shadow-xl shadow-yellow-500/40'
                   : 'cursor-default opacity-90'
               }`}
             >
@@ -122,47 +167,53 @@ export const GameBoard: React.FC<GameBoardProps> = ({
                 size="md"
               />
 
-              {/* Remaining Cards Badge */}
-              <div className="absolute -top-2.5 -right-2.5 bg-slate-900 border-2 border-yellow-400 text-yellow-300 font-mono font-black text-xs px-2.5 py-0.5 rounded-full shadow-xl flex items-center gap-1">
-                <Layers size={11} />
+              {/* Cards Count Badge */}
+              <div className="absolute -top-2 -right-2 bg-slate-950 border-2 border-yellow-400 text-yellow-300 font-mono font-black text-[10px] sm:text-xs px-2 py-0.5 rounded-full shadow-xl flex items-center gap-1 z-20">
+                <Layers size={10} />
                 <span>{drawPileCount}</span>
               </div>
 
-              {/* Big Draw Prompt if it is your turn */}
+              {/* Draw Prompt Banner when it's your turn */}
               {isMyTurn && (
-                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black text-xs px-3 py-1 rounded-full shadow-xl animate-bounce flex items-center gap-1 border border-yellow-200">
-                  <Hand size={12} />
+                <div
+                  className={`absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-slate-950 font-black text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full shadow-xl flex items-center gap-1 border border-white/60 transition-all z-20 ${
+                    hasPlayableCard
+                      ? 'bg-yellow-400 hover:bg-yellow-300'
+                      : 'bg-gradient-to-r from-amber-400 to-yellow-300 animate-bounce'
+                  }`}
+                >
+                  <Hand size={11} />
                   <span>{lang === 'uz' ? 'Karta Olish' : 'Draw Card'}</span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* DISCARD PILE (CURRENT PLAYED CARDS) */}
+          {/* 2. DISCARD PILE (TOP PLAYED CARD) */}
           <div className="relative flex flex-col items-center">
-            {/* Show previously played cards underneath with natural scattered rotation */}
+            {/* Previous cards underneath */}
             {previousCards.slice(-3, -1).map((prevCard, i) => (
               <div
                 key={prevCard.id || i}
-                className="absolute top-0 left-0 pointer-events-none opacity-50"
+                className="absolute top-0 left-0 pointer-events-none opacity-40"
               >
                 <UnoCard
                   card={prevCard}
                   size="md"
-                  rotation={((i + 1) * 8 - 12) * (i % 2 === 0 ? 1 : -1)}
+                  rotation={((i + 1) * 7 - 10) * (i % 2 === 0 ? 1 : -1)}
                 />
               </div>
             ))}
 
-            {/* Current Top Card with slight physical angle */}
+            {/* Current Top Card with Colored Glow Halo */}
             {topCard && (
-              <div className="relative">
-                <UnoCard card={topCard} size="md" rotation={2} />
+              <div className={`relative rounded-2xl ring-4 ${colorInfo.ringColor} ${colorInfo.shadow} shadow-2xl`}>
+                <UnoCard card={topCard} size="md" rotation={1} />
 
-                {/* Stacking Attack Alert Badge */}
+                {/* Stacking Attack Alert (+2 / +4 penalty) */}
                 {activeDrawStack > 0 && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 border-2 border-yellow-300 text-white font-black text-xs sm:text-sm px-3.5 py-1 rounded-full shadow-2xl flex items-center gap-1.5 animate-bounce">
-                    <AlertTriangle size={14} className="text-yellow-300" />
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 border-2 border-yellow-300 text-white font-black text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full shadow-2xl flex items-center gap-1 animate-bounce z-30">
+                    <AlertTriangle size={13} className="text-yellow-300" />
                     <span>+{activeDrawStack} JARIMA!</span>
                   </div>
                 )}
@@ -170,54 +221,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             )}
           </div>
         </div>
-
-        {/* Current Active Color Pill with Radiant Ring */}
-        <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-slate-950/90 border-2 border-slate-700/80 px-4 py-1.5 rounded-full backdrop-blur-md shadow-2xl">
-          <span className="text-[11px] sm:text-xs text-slate-300 font-bold uppercase tracking-wider">
-            {lang === 'uz' ? 'Faol Rang:' : 'Active Color:'}
-          </span>
-          <div className="flex items-center gap-1.5">
-            <span
-              className={`w-4 h-4 rounded-full shadow-lg ring-2 ring-white/60 animate-pulse ${colorInfo.bg}`}
-            />
-            <span className="text-xs sm:text-sm font-black capitalize text-white">
-              {lang === 'uz' ? colorInfo.textUz : colorInfo.textEn}
-            </span>
-          </div>
-        </div>
-
-        {/* Direction Indicator Pill at top right */}
-        <div className="absolute top-3 sm:top-4 right-4 flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 px-3 py-1 rounded-full text-slate-300 text-xs shadow-md">
-          {direction === 1 ? (
-            <RotateCw size={13} className="text-cyan-400" />
-          ) : (
-            <RotateCcw size={13} className="text-cyan-400" />
-          )}
-          <span className="text-[11px] font-mono font-bold">
-            {direction === 1
-              ? lang === 'uz'
-                ? "Soat yo'nalishida"
-                : 'Clockwise'
-              : lang === 'uz'
-              ? 'Teskari'
-              : 'Counter-cw'}
-          </span>
-        </div>
-
-        {/* Turn Guide Hint for Human Player */}
-        {isMyTurn && (
-          <div className="absolute top-3 sm:top-4 left-4 hidden sm:flex items-center gap-1.5 bg-yellow-400/90 text-slate-950 px-3 py-1 rounded-full text-xs font-black shadow-lg animate-pulse">
-            <span>
-              {hasPlayableCard
-                ? lang === 'uz'
-                  ? '🎯 Kartangizni bosing'
-                  : '🎯 Tap your card'
-                : lang === 'uz'
-                ? '🃏 Kolodadan oling'
-                : '🃏 Draw a card'}
-            </span>
-          </div>
-        )}
       </div>
     </div>
   );
